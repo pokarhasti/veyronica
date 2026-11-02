@@ -140,7 +140,7 @@ def seed():
                 sales_velocity_7d = EXCLUDED.sales_velocity_7d
         """))
 
-    print("✅ Veyronica seed data loaded successfully.")
+    print("[OK] Veyronica seed data loaded successfully.")
     print("   Stores: STORE-214 (hero), STORE-087 (auto-approve), STORE-312 (regional manager)")
     print("   SKUs: 12 | Suppliers: 4 | Approvers: 3")
 
@@ -174,9 +174,9 @@ def reset():
         conn.execute(text("DELETE FROM stores"))
         conn.execute(text("DELETE FROM approvers"))
 
-    print("🗑️  All data cleared.")
+    print("[CLEARED] All data cleared.")
     seed()
-    print("✅ Demo reset complete.")
+    print("[OK] Demo reset complete.")
 
 
 if __name__ == "__main__":

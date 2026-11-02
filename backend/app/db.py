@@ -8,6 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy import create_engine
 
+import os
+import urllib.parse
+from typing import Any
+
 from app.config import get_settings
 
 
@@ -16,32 +20,112 @@ class Base(DeclarativeBase):
     pass
 
 
+def mask_database_url(raw_url: str) -> str:
+    """Mask password in database URL for safe logging and error reporting."""
+    if not raw_url:
+        return ""
+    try:
+        parsed = urllib.parse.urlsplit(raw_url)
+        if parsed.password:
+            netloc = parsed.netloc.replace(f":{parsed.password}@", ":***@")
+        else:
+            netloc = parsed.netloc
+        return urllib.parse.urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment))
+    except Exception:
+        return "***"
+
+
+def normalize_database_url(raw_url: str, is_async: bool = True) -> tuple[str, dict[str, Any]]:
+    """
+    Parses and normalizes a database URL for asyncpg (or sync psycopg2).
+    - Uses urllib.parse for robust parsing across formats (Neon, local Postgres, Supabase).
+    - Handles postgres://, postgresql://, and postgresql+asyncpg:// schemes.
+    - Strips driver-unsupported parameters like channel_binding.
+    - Maps sslmode (require, verify-full, prefer, disable) to asyncpg connect_args['ssl'].
+    - Enforces TLS by default for any non-local host.
+    - Disables prepared statement cache (statement_cache_size=0) when connected to a pooler
+      host (e.g. Neon PgBouncer) because transaction poolers rotate physical backend connections,
+      which would break session-level prepared statements.
+    Returns (clean_url, connect_args).
+    """
+    if not raw_url:
+        return "", {}
+
+    parsed = urllib.parse.urlsplit(raw_url)
+    target_scheme = "postgresql+asyncpg" if is_async else "postgresql"
+
+    hostname = (parsed.hostname or "").lower()
+    is_local = hostname in ("localhost", "127.0.0.1", "::1", "") or hostname.endswith(".local")
+    is_pooler = "-pooler" in hostname
+
+    query_params = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+    retained_params: list[tuple[str, str]] = []
+    connect_args: dict[str, Any] = {}
+    ssl_setting: bool | None = None
+
+    for k, v in query_params:
+        k_lower = k.lower()
+        if k_lower == "channel_binding":
+            # Unsupported by asyncpg; safely strip
+            continue
+        elif k_lower == "sslmode":
+            v_lower = v.lower()
+            if v_lower in ("disable", "allow"):
+                ssl_setting = False
+            elif v_lower in ("require", "prefer", "verify-ca", "verify-full"):
+                ssl_setting = True
+            # Strip sslmode from URL query string
+            continue
+        elif k_lower == "ssl":
+            v_lower = v.lower()
+            ssl_setting = False if v_lower in ("0", "false", "f", "disable") else True
+            continue
+        else:
+            retained_params.append((k, v))
+
+    # Apply default SSL policy: local defaults to False, remote defaults to True
+    if ssl_setting is None:
+        ssl_setting = False if is_local else True
+
+    if is_async:
+        if ssl_setting is not None:
+            connect_args["ssl"] = ssl_setting
+        if is_pooler:
+            # Neon uses PgBouncer in transaction pooling mode.
+            # Disabling prepared statement cache prevents 'prepared statement does not exist' errors.
+            connect_args["statement_cache_size"] = 0
+            connect_args["prepared_statement_cache_size"] = 0
+    else:
+        # Sync engine (psycopg2) supports sslmode in query params
+        if ssl_setting is False:
+            retained_params.append(("sslmode", "disable"))
+        elif ssl_setting is True:
+            retained_params.append(("sslmode", "require"))
+
+    clean_query = urllib.parse.urlencode(retained_params)
+    clean_url = urllib.parse.urlunsplit((target_scheme, parsed.netloc, parsed.path, clean_query, parsed.fragment))
+
+    return clean_url, connect_args
+
+
 def _normalize_async_url(url: str) -> str:
-    if not url:
-        return url
-    if url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
-    elif url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
-        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    if "sslmode=require" in url:
-        url = url.replace("sslmode=require", "ssl=require")
-    return url
+    """Backward compatibility wrapper returning clean async URL string."""
+    clean_url, _ = normalize_database_url(url, is_async=True)
+    return clean_url
 
 
 def _normalize_sync_url(url: str) -> str:
-    if not url:
-        return url
-    if url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql://", 1)
-    elif url.startswith("postgresql+asyncpg://"):
-        url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
-    return url
+    """Backward compatibility wrapper returning clean sync URL string."""
+    clean_url, _ = normalize_database_url(url, is_async=False)
+    return clean_url
 
 
 def _build_async_engine():
     settings = get_settings()
+    clean_url, connect_args = normalize_database_url(settings.database_url, is_async=True)
     return create_async_engine(
-        _normalize_async_url(settings.database_url),
+        clean_url,
+        connect_args=connect_args,
         echo=False,
         pool_pre_ping=True,  # detect stale connections early
         pool_size=10,
@@ -51,8 +135,14 @@ def _build_async_engine():
 
 def _build_sync_engine():
     settings = get_settings()
+    raw = settings.database_url_sync or settings.database_url
+    # If primary database_url is remote (e.g. Neon) but database_url_sync was left at default localhost
+    if settings.database_url_sync and "localhost" in settings.database_url_sync and "localhost" not in settings.database_url:
+        raw = settings.database_url
+    clean_url, connect_args = normalize_database_url(raw, is_async=False)
     return create_engine(
-        _normalize_sync_url(settings.database_url_sync or settings.database_url),
+        clean_url,
+        connect_args=connect_args,
         echo=False,
         pool_pre_ping=True,
     )
@@ -110,3 +200,24 @@ async def get_db() -> AsyncSession:
         except Exception:
             await session.rollback()
             raise
+
+
+async def apply_migrations_if_needed():
+    """Apply 001_initial.sql and 002_policy_suggestions.sql if core tables are absent."""
+    import logging
+    logger = logging.getLogger("veyronica.db")
+    migrations_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "migrations")
+    mig1 = os.path.join(migrations_dir, "001_initial.sql")
+    mig2 = os.path.join(migrations_dir, "002_policy_suggestions.sql")
+
+    engine = get_async_engine()
+    async with engine.begin() as conn:
+        raw_conn = await conn.get_raw_connection()
+        if os.path.exists(mig1):
+            with open(mig1, "r", encoding="utf-8") as f:
+                await raw_conn.driver_connection.execute(f.read())
+            logger.info("✅ Applied 001_initial.sql successfully")
+        if os.path.exists(mig2):
+            with open(mig2, "r", encoding="utf-8") as f:
+                await raw_conn.driver_connection.execute(f.read())
+            logger.info("✅ Applied 002_policy_suggestions.sql successfully")

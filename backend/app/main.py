@@ -32,31 +32,38 @@ async def lifespan(app: FastAPI):
 
     # Verify Postgres connectivity
     try:
-        from app.db import get_async_session_factory
+        from app.db import get_async_session_factory, apply_migrations_if_needed
         from sqlalchemy import text
         factory = get_async_session_factory()
         async with factory() as session:
             await session.execute(text("SELECT 1"))
-            await session.execute(text("""
-                CREATE TABLE IF NOT EXISTS policy_suggestions (
-                    suggestion_id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                    run_id          UUID NOT NULL,
-                    approval_id     UUID NOT NULL,
-                    rejected_by     TEXT NOT NULL,
-                    rejection_reason TEXT NOT NULL,
-                    current_rule    TEXT NOT NULL,
-                    suggested_rule  TEXT NOT NULL,
-                    rationale       TEXT NOT NULL,
-                    confidence      NUMERIC(4,2) NOT NULL DEFAULT 0.85,
-                    status          TEXT NOT NULL DEFAULT 'suggested',
-                    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                )
-            """))
-            await session.commit()
-        logger.info("✅ PostgreSQL connected & policy_suggestions schema verified")
+            stores_exists = await session.execute(text(
+                "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'stores')"
+            ))
+            if not stores_exists.scalar():
+                logger.info("📦 Core tables missing. Applying migrations automatically...")
+                await apply_migrations_if_needed()
+            else:
+                await session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS policy_suggestions (
+                        suggestion_id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        run_id          UUID NOT NULL,
+                        approval_id     UUID NOT NULL,
+                        rejected_by     TEXT NOT NULL,
+                        rejection_reason TEXT NOT NULL,
+                        current_rule    TEXT NOT NULL,
+                        suggested_rule  TEXT NOT NULL,
+                        rationale       TEXT NOT NULL,
+                        confidence      NUMERIC(4,2) NOT NULL DEFAULT 0.85,
+                        status          TEXT NOT NULL DEFAULT 'suggested',
+                        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """))
+                await session.commit()
+        logger.info("✅ PostgreSQL connected & schema verified")
     except Exception as e:
         logger.error("❌ PostgreSQL connection failed: %s", e)
-        logger.error("   Set DATABASE_URL in .env and ensure Postgres is running")
+        logger.error("   Ensure database is reachable and credentials in .env are valid")
 
     # Run reconciliation: re-send Temporal signals for decided-but-unsignalled approvals
     try:

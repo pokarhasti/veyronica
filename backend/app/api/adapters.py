@@ -33,16 +33,33 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         "supplier_adapter": "error",
     }
 
-    # Postgres
+    # Postgres Connectivity
     try:
         await db.execute(text("SELECT 1"))
         status["postgres"] = "ok"
-        # If Postgres is ok, adapters are ok (they're backed by Postgres)
+    except Exception as e:
+        logger.warning("Postgres connectivity check failed: %s", e)
+
+    # Inventory Adapter (reads store_stock)
+    try:
+        await db.execute(text("SELECT 1 FROM store_stock LIMIT 1"))
         status["inventory_adapter"] = "ok"
+    except Exception as e:
+        logger.warning("Inventory adapter check failed: %s", e)
+
+    # ERP Adapter (writes/reads purchase_orders)
+    try:
+        await db.execute(text("SELECT 1 FROM purchase_orders LIMIT 1"))
         status["erp_adapter"] = "ok"
+    except Exception as e:
+        logger.warning("ERP adapter check failed: %s", e)
+
+    # Supplier Adapter (writes/reads sent_emails)
+    try:
+        await db.execute(text("SELECT 1 FROM sent_emails LIMIT 1"))
         status["supplier_adapter"] = "ok"
     except Exception as e:
-        logger.warning("Postgres health check failed: %s", e)
+        logger.warning("Supplier adapter check failed: %s", e)
 
     # Temporal & Worker
     try:
