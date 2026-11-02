@@ -127,9 +127,15 @@ async def _decide(
     from datetime import datetime, timezone
     from app.audit.writer import write_audit_event
 
-    # 1. Fetch approval and verify pending status
+    # 1. Fetch approval, associated run, and verify pending status
     result = await db.execute(
-        text("SELECT * FROM approval_requests WHERE approval_id = :id FOR UPDATE"),
+        text("""
+            SELECT ar.*, r.store_id
+            FROM approval_requests ar
+            JOIN runs r ON r.run_id = ar.run_id
+            WHERE ar.approval_id = :id
+            FOR UPDATE OF ar
+        """),
         {"id": approval_id},
     )
     approval = result.mappings().first()
@@ -142,7 +148,7 @@ async def _decide(
             detail=f"Approval {approval_id} already decided: {approval['status']}",
         )
 
-    # 2. Validate approver exists and has sufficient role
+    # 2. Validate approver exists, has sufficient role, and matches store scope
     approver_result = await db.execute(
         text("SELECT * FROM approvers WHERE approver_id = :id"),
         {"id": body.approver_id},
@@ -158,6 +164,16 @@ async def _decide(
             detail=(
                 f"Approver {body.approver_id} (role: {approver['role']}) "
                 f"cannot decide approvals assigned to {approval['assigned_role']}"
+            ),
+        )
+
+    # Store scoping check: store-scoped approvers can only decide orders for their own store
+    if approver["store_id"] is not None and approver["store_id"] != approval["store_id"]:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"Approver {approver['name']} ({body.approver_id}) is scoped to "
+                f"{approver['store_id']} and cannot decide orders for {approval['store_id']}."
             ),
         )
 
