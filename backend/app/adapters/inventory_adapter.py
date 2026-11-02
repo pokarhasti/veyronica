@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -75,3 +76,29 @@ class PostgresInventoryAdapter:
     async def read_sales_velocity(self, store_id: str, sku: str) -> float:
         rec = await self.read_store_stock(store_id, sku)
         return rec.sales_velocity_7d
+
+    async def read_peer_stores_surplus(
+        self, sku: str, exclude_store_id: str, min_days_cover: float = 7.0
+    ) -> list[dict[str, Any]]:
+        """
+        Scan peer V-Mart stores for surplus stock with >= min_days_cover.
+        Useful for lateral inter-store inventory rebalancing.
+        """
+        result = await self.session.execute(
+            text("""
+                SELECT store_id, sku, current_stock, sales_velocity_7d,
+                       ROUND((current_stock / NULLIF(sales_velocity_7d, 0))::NUMERIC, 1) AS days_cover
+                FROM store_stock
+                WHERE sku = :sku
+                  AND store_id != :exclude_store_id
+                  AND sales_velocity_7d > 0
+                  AND (current_stock / sales_velocity_7d) >= :min_days_cover
+                ORDER BY days_cover DESC
+            """),
+            {
+                "sku": sku,
+                "exclude_store_id": exclude_store_id,
+                "min_days_cover": min_days_cover,
+            },
+        )
+        return [dict(r) for r in result.mappings().all()]

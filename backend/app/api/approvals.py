@@ -243,6 +243,98 @@ async def _decide(
     )
     run = run_result.mappings().first()
 
+    # Innovation 3.4: Line-item quantity override handling
+    if outcome == "approved" and body.line_overrides:
+        import json
+        new_total = sum(
+            Decimal(str(item.get("qty", 0))) * Decimal(str(item.get("unit_cost", 0)))
+            for item in body.line_overrides
+        )
+        da_res = await db.execute(
+            text("SELECT tool_args, total_value FROM draft_actions WHERE action_id = :action_id"),
+            {"action_id": approval["action_id"]},
+        )
+        da_row = da_res.mappings().first()
+        current_args = da_row["tool_args"] if da_row else {}
+        if isinstance(current_args, str):
+            current_args = json.loads(current_args)
+        orig_lines = current_args.get("lines", [])
+        current_args["lines"] = body.line_overrides
+        current_args["manager_quantity_overridden"] = True
+        current_args["original_lines_before_override"] = orig_lines
+
+        await db.execute(
+            text("""
+                UPDATE draft_actions
+                SET tool_args = :tool_args::jsonb, total_value = :new_total
+                WHERE action_id = :action_id
+            """),
+            {
+                "tool_args": json.dumps(current_args),
+                "new_total": new_total,
+                "action_id": approval["action_id"],
+            },
+        )
+
+        await write_audit_event(
+            db,
+            run_id=approval["run_id"],
+            correlation_id=run["correlation_id"] if run else approval["run_id"],
+            event_type="approval_quantity_overridden",
+            actor_type="human",
+            actor_id=body.approver_id,
+            payload={
+                "action_id": str(approval["action_id"]),
+                "overridden_lines": body.line_overrides,
+                "new_total_value": float(new_total),
+                "original_total_value": float(da_row["total_value"]) if da_row else 0.0,
+            },
+        )
+
+    # Feature 2.5: Rejection-to-policy learning engine
+    if outcome == "rejected" and body.reason:
+        import uuid
+        reason_lower = body.reason.lower()
+        if "budget" in reason_lower or "expensive" in reason_lower or "funds" in reason_lower or "cost" in reason_lower:
+            current_rule = "Store Manager Approval Limit: ₹50,000"
+            suggested_rule = "Store Manager Approval Limit: ₹35,000 (Budget Headroom Caution)"
+            rationale = f"Rejection cites financial constraints: '{body.reason[:80]}'. Lowering store manager limit enforces regional escalation earlier."
+        elif "lead" in reason_lower or "supplier" in reason_lower or "vendor" in reason_lower or "late" in reason_lower:
+            current_rule = "Max Supplier Lead Time: 7 days"
+            suggested_rule = "Max Supplier Lead Time: 5 days + Mandatory Regional Review"
+            rationale = f"Rejection cites delivery risk: '{body.reason[:80]}'. Tighter lead time constraint prevents store stockouts."
+        elif "quantity" in reason_lower or "pack" in reason_lower or "moq" in reason_lower or "overstock" in reason_lower:
+            current_rule = "Standard MOQ Pack Rounding"
+            suggested_rule = "Enable Mandatory DC Split before Vendor MOQ Commitment"
+            rationale = f"Rejection cites excess stock: '{body.reason[:80]}'. Central warehouse DC allocation will prevent margin erosion."
+        else:
+            current_rule = "Tier 2 Regional Escalation: > ₹50,000"
+            suggested_rule = "Dynamic Escalation Threshold: ₹40,000 (Human Feedback Tuning)"
+            rationale = f"Human feedback indicates tighter governance needed: '{body.reason[:80]}'."
+
+        await db.execute(
+            text("""
+                INSERT INTO policy_suggestions (
+                    suggestion_id, run_id, approval_id, rejected_by,
+                    rejection_reason, current_rule, suggested_rule,
+                    rationale, confidence, status, created_at
+                ) VALUES (
+                    :sug_id, :run_id, :approval_id, :rejected_by,
+                    :reason, :curr, :sugg, :rat, 0.88, 'suggested', NOW()
+                )
+            """),
+            {
+                "sug_id": str(uuid.uuid4()),
+                "run_id": str(approval["run_id"]),
+                "approval_id": str(approval_id),
+                "rejected_by": body.approver_id,
+                "reason": body.reason,
+                "curr": current_rule,
+                "sugg": suggested_rule,
+                "rat": rationale,
+            },
+        )
+
     # 4. Write audit event
     await write_audit_event(
         db,

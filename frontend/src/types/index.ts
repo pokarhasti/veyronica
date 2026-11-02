@@ -1,5 +1,5 @@
 export interface CheckResult {
-  check_name: 'moq' | 'lead_time' | 'budget_headroom' | 'credit_limit';
+  check_name: 'moq' | 'lead_time' | 'budget_headroom' | 'credit_limit' | 'dc_allocation' | 'peer_transfer';
   status: 'PASS' | 'FLAG' | 'FAIL';
   reason: string;
   numeric_evidence: Record<string, any>;

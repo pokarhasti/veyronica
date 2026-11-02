@@ -36,11 +36,15 @@ export const CheckRow: React.FC<CheckRowProps> = ({ check }) => {
       case 'moq':
         return 'MOQ Check';
       case 'lead_time':
-        return 'Lead Time Check';
+        return 'Lead Time & Stockout Gap';
       case 'budget_headroom':
         return 'Store Budget Headroom';
       case 'credit_limit':
         return 'Supplier Credit Limit';
+      case 'dc_allocation':
+        return 'Warehouse-First DC Allocation (WH-NORTH-01)';
+      case 'peer_transfer':
+        return 'Inter-Store Lateral Transfer Check';
       default:
         return name;
     }

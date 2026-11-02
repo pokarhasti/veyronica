@@ -1,7 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { RunSummary } from '../types';
-import { Play, Sparkles, AlertCircle, ArrowRight, CheckCircle2, Clock } from 'lucide-react';
+import {
+  Play,
+  Sparkles,
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Sliders,
+  RotateCcw,
+  TrendingUp,
+  ShieldAlert,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 
 interface HomePageProps {
   onNavigateToRun: (runId: string) => void;
@@ -14,9 +27,37 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
   const [error, setError] = useState<string | null>(null);
   const [recentRuns, setRecentRuns] = useState<RunSummary[]>([]);
 
-  useEffect(() => {
+  // Enhancement 4.1: Live "What-If" Store & Budget Sandbox State
+  const [sandboxOpen, setSandboxOpen] = useState(false);
+  const [storeState, setStoreState] = useState<{
+    monthly_budget: number;
+    budget_spent: number;
+  }>({ monthly_budget: 150000, budget_spent: 90000 });
+  const [updatingSandbox, setUpdatingSandbox] = useState(false);
+  const [sandboxFeedback, setSandboxFeedback] = useState<string | null>(null);
+
+  const fetchRecentRuns = () => {
     api.getRuns().then(setRecentRuns).catch(console.error);
-  }, []);
+  };
+
+  const fetchStoreData = async (storeId: string) => {
+    try {
+      const data = await api.getStoreState(storeId);
+      if (data?.store) {
+        setStoreState({
+          monthly_budget: Number(data.store.monthly_budget),
+          budget_spent: Number(data.store.budget_spent),
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchRecentRuns();
+    fetchStoreData(selectedStore);
+  }, [selectedStore]);
 
   const handleTrigger = async () => {
     setLoading(true);
@@ -28,6 +69,40 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
       setError(e.message || 'Trigger failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSimulateBudget = async (newSpent: number) => {
+    setUpdatingSandbox(true);
+    try {
+      await api.simulateStoreState({
+        store_id: selectedStore,
+        budget_spent: newSpent,
+      });
+      setStoreState((prev) => ({ ...prev, budget_spent: newSpent }));
+      const headroom = storeState.monthly_budget - newSpent;
+      const pct = Math.round((headroom / storeState.monthly_budget) * 100);
+      setSandboxFeedback(`Store budget updated to ₹${newSpent.toLocaleString('en-IN')} (Remaining Headroom: ₹${headroom.toLocaleString('en-IN')} / ${pct}%)`);
+      setTimeout(() => setSandboxFeedback(null), 4000);
+    } catch (err: any) {
+      alert(`Simulation error: ${err.message}`);
+    } finally {
+      setUpdatingSandbox(false);
+    }
+  };
+
+  const handleResetSandbox = async () => {
+    setUpdatingSandbox(true);
+    try {
+      await api.resetDemo();
+      await fetchStoreData(selectedStore);
+      fetchRecentRuns();
+      setSandboxFeedback('Database reset to original seed state.');
+      setTimeout(() => setSandboxFeedback(null), 3000);
+    } catch (err: any) {
+      alert(`Reset error: ${err.message}`);
+    } finally {
+      setUpdatingSandbox(false);
     }
   };
 
@@ -52,7 +127,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
     },
   };
 
-  const currentScenario = storeScenarios[selectedStore];
+  const currentScenario = storeScenarios[selectedStore] || storeScenarios['STORE-214'];
+  const remainingHeadroom = Math.max(0, storeState.monthly_budget - storeState.budget_spent);
+  const budgetSpentPct = Math.min(100, Math.round((storeState.budget_spent / storeState.monthly_budget) * 100));
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -69,33 +146,42 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
           </h1>
 
           <p className="mt-3 text-slate-300 text-sm sm:text-base leading-relaxed">
-            Autonomous signal detection meets strict deterministic governance. AI agents draft explanations, deterministic code evaluates constraints, and Temporal ensures durable human approval before any ERP write.
+            Multi-agent replenishment intelligence powered by <strong>LangGraph</strong> cognitive graphs and{' '}
+            <strong>Temporal</strong> durable workflow primitives. Rigorously enforces store OTB budgets, supplier MOQs,
+            lead time constraints, and human authorization before ERP write.
           </p>
 
-          {/* Trigger Form */}
-          <div className="mt-8 flex flex-wrap items-center gap-4 bg-slate-950/70 p-3 rounded-xl border border-slate-800">
-            <div className="flex items-center space-x-3">
-              <span className="text-xs font-semibold text-slate-400">Select Store:</span>
+          {/* Trigger Selector */}
+          <div className="mt-8 flex flex-wrap items-center gap-4">
+            <div className="bg-slate-950/80 border border-slate-700/80 rounded-xl p-1.5 flex items-center shadow-inner">
+              <span className="text-xs text-slate-400 font-semibold px-3 uppercase tracking-wider">
+                Store:
+              </span>
               <select
-                aria-label="Select store"
-                className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm font-semibold text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                aria-label="Select store to replenish"
+                className="bg-transparent text-slate-100 text-sm font-semibold pr-8 py-1.5 focus:outline-none cursor-pointer"
                 value={selectedStore}
                 onChange={(e) => setSelectedStore(e.target.value)}
               >
-                <option value="STORE-214">STORE-214 (V-Mart Lucknow Gomtinagar)</option>
-                <option value="STORE-087">STORE-087 (V-Mart Jaipur Vaishali)</option>
-                <option value="STORE-312">STORE-312 (V-Mart Patna Boring Road)</option>
+                <option value="STORE-214" className="bg-slate-900 text-slate-100">
+                  STORE-214 (Lucknow Gomtinagar)
+                </option>
+                <option value="STORE-087" className="bg-slate-900 text-slate-100">
+                  STORE-087 (Jaipur Vaishali)
+                </option>
+                <option value="STORE-312" className="bg-slate-900 text-slate-100">
+                  STORE-312 (Patna Boring Road)
+                </option>
               </select>
             </div>
 
             <button
-              type="button"
-              disabled={loading}
               onClick={handleTrigger}
-              className="inline-flex items-center px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 shadow-lg shadow-indigo-950/60 transition-colors"
+              disabled={loading}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm px-6 py-3 rounded-xl shadow-lg shadow-indigo-950/60 flex items-center space-x-2 transition-all disabled:opacity-50"
             >
-              <Play className="w-4 h-4 mr-2 fill-current" />
-              {loading ? 'Evaluating Inventory...' : 'Run Replenishment Check'}
+              <Play className="w-4 h-4 fill-white" />
+              <span>{loading ? 'Evaluating Agents...' : 'Run Replenishment Check'}</span>
             </button>
           </div>
 
@@ -108,8 +194,115 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
         </div>
       </div>
 
+      {/* Enhancement 4.1: Interactive "What-If" Store & Budget Sandbox */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+        <div
+          className="p-4 bg-slate-950/70 border-b border-slate-800/80 flex items-center justify-between cursor-pointer select-none"
+          onClick={() => setSandboxOpen(!sandboxOpen)}
+        >
+          <div className="flex items-center space-x-2.5">
+            <div className="p-1.5 rounded-md bg-amber-950/60 border border-amber-800 text-amber-400">
+              <Sliders className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-bold text-slate-200">
+                  Interactive "What-If" ERP & Budget Sandbox
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">
+                  Live DB Tuning
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Simulate store budget spikes or inventory deficits in real-time to test policy tier escalations.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <div className="text-right text-xs font-mono hidden sm:block">
+              <span className="text-slate-400">Remaining OTB: </span>
+              <strong className="text-emerald-400">₹{remainingHeadroom.toLocaleString('en-IN')}</strong>
+            </div>
+            <button className="text-slate-400 hover:text-white p-1">
+              {sandboxOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        {sandboxOpen && (
+          <div className="p-6 space-y-6 bg-slate-900/60">
+            {sandboxFeedback && (
+              <div className="p-3 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-xs flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                <span>{sandboxFeedback}</span>
+              </div>
+            )}
+
+            {/* Live Slider for Monthly Budget Spent */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-300 font-semibold">
+                  Store Monthly Budget Spent ({selectedStore}):
+                </span>
+                <span className="font-mono text-amber-400 font-bold">
+                  ₹{storeState.budget_spent.toLocaleString('en-IN')} / ₹{storeState.monthly_budget.toLocaleString('en-IN')} ({budgetSpentPct}%)
+                </span>
+              </div>
+
+              <input
+                type="range"
+                min="0"
+                max={storeState.monthly_budget}
+                step="5000"
+                value={storeState.budget_spent}
+                onChange={(e) => handleSimulateBudget(Number(e.target.value))}
+                disabled={updatingSandbox}
+                className="w-full accent-indigo-500 bg-slate-950 h-2 rounded-lg cursor-pointer"
+              />
+
+              <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                <span>₹0 (100% Headroom)</span>
+                <span>₹{(storeState.monthly_budget / 2).toLocaleString('en-IN')} (50%)</span>
+                <span>₹{storeState.monthly_budget.toLocaleString('en-IN')} (Cap Exceeded)</span>
+              </div>
+            </div>
+
+            {/* Quick Test Preset Buttons */}
+            <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-slate-400 font-semibold mr-1">Quick Presets:</span>
+                <button
+                  onClick={() => handleSimulateBudget(Math.round(storeState.monthly_budget * 0.92))}
+                  disabled={updatingSandbox}
+                  className="px-3 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-950 border border-rose-800/80 text-rose-300 text-xs font-semibold transition-colors"
+                >
+                  ⚡ Force Budget Headroom Violation (92% Spent)
+                </button>
+                <button
+                  onClick={() => handleSimulateBudget(Math.round(storeState.monthly_budget * 0.3))}
+                  disabled={updatingSandbox}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-950 border border-emerald-800/80 text-emerald-300 text-xs font-semibold transition-colors"
+                >
+                  ✨ Healthy Headroom (30% Spent)
+                </button>
+              </div>
+
+              <button
+                onClick={handleResetSandbox}
+                disabled={updatingSandbox}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset Seed</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Selected Scenario Preview */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-6">
+      <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs uppercase tracking-wider font-bold text-slate-400">
             Scenario Preview
@@ -139,7 +332,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
           </button>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
           {recentRuns.length === 0 ? (
             <div className="p-8 text-center text-slate-500 text-sm">
               No workflow runs recorded yet. Click "Run Replenishment Check" above to trigger a live run.

@@ -4,6 +4,7 @@ import { ApproverInfo, RunDetail } from '../types';
 import { DecisionCard } from '../components/DecisionCard';
 import { Timeline } from '../components/Timeline';
 import { CheckRow } from '../components/CheckRow';
+import { PipelineStepper } from '../components/PipelineStepper';
 import { ArrowLeft, Clock, RefreshCw, AlertCircle, Database, Mail, ShieldCheck } from 'lucide-react';
 
 interface RunDetailPageProps {
@@ -17,6 +18,7 @@ export const RunDetailPage: React.FC<RunDetailPageProps> = ({ runId, onBack, cur
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'decision' | 'signals' | 'checks' | 'audit'>('decision');
+  const [selectedDraftIndex, setSelectedDraftIndex] = useState(0);
 
   const fetchRun = async () => {
     if (!runId) return;
@@ -40,11 +42,11 @@ export const RunDetailPage: React.FC<RunDetailPageProps> = ({ runId, onBack, cur
     return () => clearInterval(interval);
   }, [runId, run?.status]);
 
-  const handleApprove = async (approvalId: string) => {
+  const handleApprove = async (approvalId: string, lineOverrides?: any[]) => {
     if (!currentApprover) return;
     setActionLoading(true);
     try {
-      await api.approveAction(approvalId, currentApprover.approver_id);
+      await api.approveAction(approvalId, currentApprover.approver_id, lineOverrides);
       await fetchRun();
     } catch (e: any) {
       alert(`Approval error: ${e.message}`);
@@ -122,7 +124,7 @@ export const RunDetailPage: React.FC<RunDetailPageProps> = ({ runId, onBack, cur
   ];
 
   const primaryApproval = run.approval_requests?.[0];
-  const primaryDraft = run.drafts?.[0];
+  const primaryDraft = run.drafts?.[selectedDraftIndex] || run.drafts?.[0];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -172,6 +174,43 @@ export const RunDetailPage: React.FC<RunDetailPageProps> = ({ runId, onBack, cur
           )}
         </div>
       </div>
+
+      {/* Enhancement 4.3: Live 5-Stage Agentic Pipeline Stepper */}
+      <PipelineStepper
+        status={run.status}
+        agentPrepMs={run.agent_prep_ms}
+        approvalWaitMs={run.approval_wait_ms}
+      />
+
+      {/* Enhancement 4.2: Multi-Supplier PO Switcher */}
+      {run.drafts && run.drafts.length > 1 && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-slate-400 font-semibold px-2 uppercase tracking-wider">
+            Supplier Drafts ({run.drafts.length}):
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {run.drafts.map((d, idx) => {
+              const sName = (d.tool_args as any)?.supplier_name || (d.tool_args as any)?.supplier_id || `Supplier ${idx + 1}`;
+              const val = Number(d.total_value);
+              const isSelected = selectedDraftIndex === idx;
+              return (
+                <button
+                  key={d.action_id || idx}
+                  onClick={() => setSelectedDraftIndex(idx)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 border transition-all ${
+                    isSelected
+                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-950'
+                      : 'bg-slate-950 hover:bg-slate-800 border-slate-800 text-slate-300'
+                  }`}
+                >
+                  <span>{sName}</span>
+                  <span className="font-mono text-[11px] opacity-80">₹{val.toLocaleString('en-IN')}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Live Timeline Component */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">

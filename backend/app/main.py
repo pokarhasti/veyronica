@@ -37,7 +37,23 @@ async def lifespan(app: FastAPI):
         factory = get_async_session_factory()
         async with factory() as session:
             await session.execute(text("SELECT 1"))
-        logger.info("✅ PostgreSQL connected")
+            await session.execute(text("""
+                CREATE TABLE IF NOT EXISTS policy_suggestions (
+                    suggestion_id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    run_id          UUID NOT NULL,
+                    approval_id     UUID NOT NULL,
+                    rejected_by     TEXT NOT NULL,
+                    rejection_reason TEXT NOT NULL,
+                    current_rule    TEXT NOT NULL,
+                    suggested_rule  TEXT NOT NULL,
+                    rationale       TEXT NOT NULL,
+                    confidence      NUMERIC(4,2) NOT NULL DEFAULT 0.85,
+                    status          TEXT NOT NULL DEFAULT 'suggested',
+                    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """))
+            await session.commit()
+        logger.info("✅ PostgreSQL connected & policy_suggestions schema verified")
     except Exception as e:
         logger.error("❌ PostgreSQL connection failed: %s", e)
         logger.error("   Set DATABASE_URL in .env and ensure Postgres is running")
@@ -145,6 +161,7 @@ def create_app() -> FastAPI:
     from app.api.approvers import router as approvers_router
     from app.api.adapters import router as adapters_router
     from app.api.admin import router as admin_router
+    from app.api.policy import router as policy_router
 
     app.include_router(workflows_router)
     app.include_router(runs_router)
@@ -154,6 +171,7 @@ def create_app() -> FastAPI:
     app.include_router(approvers_router)
     app.include_router(adapters_router)
     app.include_router(admin_router)
+    app.include_router(policy_router)
 
     @app.get("/")
     async def root():

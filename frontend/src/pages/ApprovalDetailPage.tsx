@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { ApproverInfo, DraftAction } from '../types';
 import { DecisionCard } from '../components/DecisionCard';
+import { PipelineStepper } from '../components/PipelineStepper';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 
 interface ApprovalDetailPageProps {
@@ -36,11 +37,11 @@ export const ApprovalDetailPage: React.FC<ApprovalDetailPageProps> = ({
     fetchApproval();
   }, [approvalId]);
 
-  const handleApprove = async (id: string) => {
+  const handleApprove = async (id: string, lineOverrides?: any[]) => {
     if (!currentApprover) return;
     setActionLoading(true);
     try {
-      await api.approveAction(id, currentApprover.approver_id);
+      await api.approveAction(id, currentApprover.approver_id, lineOverrides);
       alert('Approval confirmed! Purchase order created in ERP and supplier email dispatched.');
       onBack();
     } catch (e: any) {
@@ -115,6 +116,10 @@ export const ApprovalDetailPage: React.FC<ApprovalDetailPageProps> = ({
           </p>
         </div>
       </div>
+
+      <PipelineStepper
+        status="awaiting_approval"
+      />
 
       <DecisionCard
         approvalId={approvalId}

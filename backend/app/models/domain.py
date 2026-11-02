@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -35,7 +35,9 @@ class ReplenishmentSignal(BaseModel):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class CheckResult(BaseModel):
-    check_name: Literal["moq", "lead_time", "budget_headroom", "credit_limit"]
+    check_name: Literal[
+        "moq", "lead_time", "budget_headroom", "credit_limit", "dc_allocation", "peer_transfer"
+    ]
     status: Literal["PASS", "FLAG", "FAIL"]
     reason: str
     numeric_evidence: dict
@@ -94,6 +96,32 @@ class ApprovalRequest(BaseModel):
 class DecisionRequest(BaseModel):
     approver_id: str
     reason: str | None = None  # required (>= 20 chars) when rejecting
+    line_overrides: list[dict[str, Any]] | None = None  # Innovation 3.4: interactive line item adjustments
+
+
+class PolicySuggestion(BaseModel):
+    suggestion_id: str
+    run_id: str
+    approval_id: str
+    rejected_by: str
+    rejection_reason: str
+    current_rule: str
+    suggested_rule: str
+    rationale: str
+    confidence: float = 0.85
+    status: Literal["suggested", "applied", "dismissed"] = "suggested"
+    created_at: datetime
+
+
+class SimulateStoreStateRequest(BaseModel):
+    store_id: str
+    budget_spent: float | None = None
+    monthly_budget: float | None = None
+    sku: str | None = None
+    current_stock: int | None = None
+    sales_velocity_7d: float | None = None
+    approver_id: str | None = None
+    approver_active: bool | None = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -47,16 +47,27 @@ class PostgresERPAdapter:
             email=row["email"],
         )
 
-    async def read_purchase_history(self, supplier_id: str) -> list[dict[str, Any]]:
+    async def read_purchase_history(
+        self, supplier_id: str | None = None, store_id: str | None = None, limit: int = 10
+    ) -> list[dict[str, Any]]:
+        conditions = []
+        params: dict[str, Any] = {"limit": limit}
+        if supplier_id:
+            conditions.append("supplier_id = :supplier_id")
+            params["supplier_id"] = supplier_id
+        if store_id:
+            conditions.append("store_id = :store_id")
+            params["store_id"] = store_id
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         result = await self.session.execute(
-            text("""
-                SELECT po_id, run_id, store_id, total_value, created_at
+            text(f"""
+                SELECT po_id, run_id, store_id, supplier_id, total_value, created_at
                 FROM purchase_orders
-                WHERE supplier_id = :supplier_id
+                {where}
                 ORDER BY created_at DESC
-                LIMIT 10
+                LIMIT :limit
             """),
-            {"supplier_id": supplier_id},
+            params,
         )
         return [dict(r) for r in result.mappings().all()]
 

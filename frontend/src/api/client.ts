@@ -54,12 +54,12 @@ export const api = {
 
   getApproval: (approval_id: string) => fetchJson<any>(`/api/approvals/${approval_id}`),
 
-  approveAction: (approval_id: string, approver_id: string) =>
+  approveAction: (approval_id: string, approver_id: string, line_overrides?: any[]) =>
     fetchJson<{ message: string; approval_id: string; status: string }>(
       `/api/approvals/${approval_id}/approve`,
       {
         method: 'POST',
-        body: JSON.stringify({ approver_id }),
+        body: JSON.stringify({ approver_id, line_overrides }),
       }
     ),
 
@@ -80,6 +80,53 @@ export const api = {
     if (params?.actor_id) q.set('actor_id', params.actor_id);
     return fetchJson<AuditEvent[]>(`/api/audit?${q.toString()}`);
   },
+
+  verifyAuditIntegrity: () =>
+    fetchJson<{
+      status: string;
+      verified: boolean;
+      total_events_verified: number;
+      root_hash: string;
+      triggers_enforced: boolean;
+      active_triggers: string[];
+      algorithm: string;
+      verified_at: string;
+      chain_preview: any[];
+    }>('/api/audit/verify-integrity'),
+
+  // Policy Governance & Learning Engine
+  getActiveRules: () => fetchJson<Record<string, any>>('/api/policy/rules'),
+
+  getPolicySuggestions: (status?: string) =>
+    fetchJson<any[]>(`/api/policy/suggestions${status ? `?status=${status}` : ''}`),
+
+  applyPolicySuggestion: (suggestion_id: string) =>
+    fetchJson<{ status: string; suggestion_id: string; message: string; active_rules: any }>(
+      `/api/policy/suggestions/${suggestion_id}/apply`,
+      { method: 'POST' }
+    ),
+
+  dismissPolicySuggestion: (suggestion_id: string) =>
+    fetchJson<{ status: string; suggestion_id: string }>(
+      `/api/policy/suggestions/${suggestion_id}/dismiss`,
+      { method: 'POST' }
+    ),
+
+  // Interactive Store Sandbox
+  getStoreState: (store_id: string) => fetchJson<any>(`/api/admin/store-state/${store_id}`),
+
+  simulateStoreState: (payload: {
+    store_id: string;
+    budget_spent?: number;
+    monthly_budget?: number;
+    sku?: string;
+    current_stock?: number;
+    sales_velocity_7d?: number;
+  }) =>
+    fetchJson<any>('/api/admin/simulate-store-state', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
 
   // Dashboard
   getDashboardMetrics: () => fetchJson<DashboardMetrics>('/api/dashboard/metrics'),
