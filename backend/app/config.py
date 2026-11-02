@@ -33,17 +33,24 @@ class Settings(BaseSettings):
     temporal_namespace: str = "default"
     temporal_task_queue: str = "replenishment"
 
-    # ── LLM – Primary (Plan A) ──
-    llm_provider: str = "openai"
+    # ── LLM (Gemini primary, Grok fallback, Plan C template safety net) ──
+    llm_provider: str = "gemini"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-3.8-flash"  # Options: gemini-3.8-flash, gemini-3.6-flash, gemini-3.5-flash-lite, gemma-4
+
+    # Grok (xAI) Fallback
+    llm_fallback_provider: str = "grok"
+    grok_api_key: str = ""
+    grok_model: str = "grok-2-latest"
+    grok_base_url: str = "https://api.x.ai/v1"
+
+    # Compatibility aliases
     llm_api_key: str = ""
-    llm_model: str = "gpt-4o"
+    llm_model: str = "gemini-3.8-flash"
     llm_timeout_seconds: int = 20
     llm_retry_count: int = 2
-
-    # ── LLM – Fallback (Plan B) ──
-    llm_fallback_provider: str = ""
     llm_fallback_api_key: str = ""
-    llm_fallback_model: str = ""
+    llm_fallback_model: str = "grok-2-latest"
 
     # ── Policy thresholds (Section 4, single source of truth) ──
     auto_approve_limit: Decimal = Decimal("10000")

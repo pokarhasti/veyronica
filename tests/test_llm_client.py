@@ -44,3 +44,23 @@ async def test_llm_client_fallback_email():
     assert "Supplier A" in email_body
     assert "STORE-214" in email_body
     assert "₹21,600.00" in email_body
+
+
+def test_gemini_model_resolution(monkeypatch):
+    client = LLMClient()
+
+    test_cases = [
+        ("Gemini 3.8 Flash", "gemini-3.8-flash"),
+        ("gemini-3.8-flash", "gemini-3.8-flash"),
+        ("Gemini 3.6 Flash", "gemini-3.6-flash"),
+        ("gemini-3.6-flash", "gemini-3.6-flash"),
+        ("Gemini 3.5 Flash-Lite", "gemini-3.5-flash-lite"),
+        ("gemini-3.5-flash-lite", "gemini-3.5-flash-lite"),
+        ("Gemma 4", "gemma-4"),
+        ("gemma-4", "gemma-4"),
+    ]
+
+    for input_model, expected_resolved in test_cases:
+        client.settings.gemini_model = input_model
+        assert client._resolve_gemini_model() == expected_resolved
+
