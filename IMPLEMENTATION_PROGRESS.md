@@ -15,7 +15,7 @@ This tracker organizes all items from `veyronica_audit_bug_report_feature_roadma
 | ID | Title | Type | Priority | Status | Files Touched | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **1.1** | Fix Nested JSONB Serialization Crash in `draft_activity` | Bug | P0 | Done | `backend/app/temporal/activities.py`, `frontend/src/components/DecisionCard.tsx`, `tests/test_agents.py` | Direct JSON array serialization + defensive frontend checkResults normalization |
-| **1.2** | Fix `agent_prep_ms` Millisecond Elapsed Calculation | Bug | P0 | Pending | `backend/app/temporal/activities.py`, `backend/app/agents/execution_agent.py` | Use `(EXTRACT(EPOCH FROM (NOW() - started_at)) * 1000)::INT` |
+| **1.2** | Fix `agent_prep_ms` Millisecond Elapsed Calculation | Bug | P0 | Done | `backend/app/temporal/activities.py` | Replaced EXTRACT(MILLISECONDS) with (EXTRACT(EPOCH) * 1000)::INT across all latency updates |
 | **1.4** | Enforce Store-Level Approver Scoping Check | Bug/Security | P0 | Pending | `backend/app/api/approvals.py` | Reject cross-store approvals for `store_manager` (`403 Forbidden`) |
 | **1.5** | Align Store Location Names (Lucknow, Jaipur, Patna) | Bug/UI | P0 | Pending | `frontend/src/pages/HomePage.tsx` | Match database seed store names with frontend cards |
 | **1.3** | Multi-Supplier Draft Handling (Remove `drafts[0]` bottleneck) | Bug/Core | P1 | Pending | `backend/app/temporal/workflows.py`, `backend/app/temporal/activities.py` | Route, approve, and execute all generated supplier drafts per run |

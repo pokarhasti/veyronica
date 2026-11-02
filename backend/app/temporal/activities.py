@@ -337,7 +337,7 @@ async def create_approval_activity(params: dict[str, Any]) -> dict[str, Any]:
             text("""
                 UPDATE runs
                 SET status = 'awaiting_approval', awaiting_since = :now,
-                    agent_prep_ms = EXTRACT(MILLISECONDS FROM (:now - started_at))
+                    agent_prep_ms = (EXTRACT(EPOCH FROM (:now - started_at)) * 1000)::INT
                 WHERE run_id = :run_id
             """),
             {"now": now, "run_id": uuid.UUID(run_id)},
@@ -396,7 +396,7 @@ async def record_rejection_activity(params: dict[str, Any]) -> dict[str, Any]:
             text("""
                 UPDATE runs
                 SET status = 'rejected', completed_at = :now,
-                    approval_wait_ms = EXTRACT(MILLISECONDS FROM (:now - awaiting_since))
+                    approval_wait_ms = (EXTRACT(EPOCH FROM (:now - awaiting_since)) * 1000)::INT
                 WHERE run_id = :run_id
             """),
             {"now": now, "run_id": uuid.UUID(run_id)},
@@ -483,7 +483,7 @@ async def finalise_activity(params: dict[str, Any]) -> dict[str, Any]:
                 UPDATE runs
                 SET status = :status, completed_at = :now,
                     approval_wait_ms = CASE
-                        WHEN awaiting_since IS NOT NULL THEN EXTRACT(MILLISECONDS FROM (:now - awaiting_since))
+                        WHEN awaiting_since IS NOT NULL THEN (EXTRACT(EPOCH FROM (:now - awaiting_since)) * 1000)::INT
                         ELSE approval_wait_ms
                     END
                 WHERE run_id = :run_id
