@@ -145,3 +145,43 @@ async def trigger_replenishment(
         temporal_wf_id=temporal_wf_id,
         status="running",
     )
+
+
+@router.get("/graph/topology")
+async def get_workflow_graph_topology():
+    """Returns LangGraph StateGraph topology, node definitions, and edges."""
+    from app.graph.workflow_graph import get_graph_topology
+    return get_graph_topology()
+
+
+@router.post("/graph/simulate")
+async def simulate_langgraph_pipeline(
+    body: TriggerRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Executes the LangGraph cognitive loop (signal -> constraint -> draft -> route)
+    directly through LangGraph StateGraph without requiring a Temporal worker.
+    """
+    from app.graph.workflow_graph import run_langgraph_pipeline
+
+    run_id = str(uuid.uuid4())
+    correlation_id = str(uuid.uuid4())
+
+    state = await run_langgraph_pipeline(
+        session=db,
+        store_id=body.store_id,
+        run_id=run_id,
+        correlation_id=correlation_id,
+    )
+
+    return {
+        "engine": "LangGraph",
+        "run_id": run_id,
+        "store_id": body.store_id,
+        "nodes_traversed": ["signal", "constraint", "draft", "route"],
+        "signals_count": len(state.get("signals", [])),
+        "drafts_count": len(state.get("drafts", [])),
+        "route": state.get("route", {}),
+        "status": state.get("status", "routed"),
+    }

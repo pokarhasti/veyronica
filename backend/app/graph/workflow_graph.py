@@ -220,15 +220,87 @@ def create_replenishment_graph(session: AsyncSession) -> StateGraph:
         }
 
     # Register nodes and flow
-    workflow.add_node("signal", signal_node)
-    workflow.add_node("constraint", constraint_node)
-    workflow.add_node("draft", draft_node)
-    workflow.add_node("route", route_node)
+    workflow.add_node("signal_node", signal_node)
+    workflow.add_node("constraint_node", constraint_node)
+    workflow.add_node("draft_node", draft_node)
+    workflow.add_node("routing_node", route_node)
 
-    workflow.set_entry_point("signal")
-    workflow.add_edge("signal", "constraint")
-    workflow.add_edge("constraint", "draft")
-    workflow.add_edge("draft", "route")
-    workflow.add_edge("route", END)
+    workflow.set_entry_point("signal_node")
+    workflow.add_edge("signal_node", "constraint_node")
+    workflow.add_edge("constraint_node", "draft_node")
+    workflow.add_edge("draft_node", "routing_node")
+    workflow.add_edge("routing_node", END)
 
     return workflow
+
+
+async def run_langgraph_pipeline(
+    session: AsyncSession,
+    store_id: str,
+    run_id: str,
+    correlation_id: str | None = None,
+) -> dict[str, Any]:
+    """
+    Executes the LangGraph StateGraph (signal_node -> constraint_node -> draft_node -> routing_node)
+    for a store replenishment cycle.
+    """
+    graph = create_replenishment_graph(session)
+    app = graph.compile()
+    initial_state: ReplenishmentState = {
+        "run_id": run_id,
+        "correlation_id": correlation_id or run_id,
+        "store_id": store_id,
+        "signals": [],
+        "checks_by_supplier": {},
+        "drafts": [],
+        "route": {},
+        "approval": None,
+        "execution_result": None,
+        "status": "started",
+    }
+    final_state = await app.ainvoke(initial_state)
+    return final_state
+
+
+def get_graph_topology() -> dict[str, Any]:
+    """Exposes the StateGraph node topology and transition edges for UI visualization."""
+    return {
+        "engine": "LangGraph",
+        "version": "StateGraph",
+        "nodes": [
+            {
+                "id": "signal_node",
+                "name": "Inventory Signal Agent",
+                "type": "agent",
+                "description": "Scans low-stock SKUs against 14-day cover and pack sizes",
+            },
+            {
+                "id": "constraint_node",
+                "name": "Deterministic Constraint Agent",
+                "type": "rule_engine",
+                "description": "Evaluates MOQ, lead time, budget headroom, and credit limits",
+            },
+            {
+                "id": "draft_node",
+                "name": "Draft PO & Rationale Agent",
+                "type": "llm_agent",
+                "description": "Generates verified POs and honest audit-backed rationale",
+            },
+            {
+                "id": "routing_node",
+                "name": "Policy Routing Agent",
+                "type": "policy_engine",
+                "description": "Determines approval tier and assigns appropriate approver persona",
+            },
+        ],
+        "edges": [
+            {"from": "signal_node", "to": "constraint_node"},
+            {"from": "constraint_node", "to": "draft_node"},
+            {"from": "draft_node", "to": "routing_node"},
+            {"from": "routing_node", "to": "END"},
+        ],
+        "temporal_bridge": {
+            "engine": "Temporal IO",
+            "description": "Durable pause on approval gate (wait_condition) and gated dual ERP/email execution",
+        },
+    }

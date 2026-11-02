@@ -25,6 +25,7 @@ from app.agents.routing_agent import RoutingAgent
 from app.agents.signal_agent import SignalAgent, calculate_order_qty
 from app.audit.writer import write_audit_event
 from app.db import get_async_session_factory
+from app.graph.workflow_graph import run_langgraph_pipeline
 from app.models.domain import CheckResult, DraftAction, ReplenishmentSignal
 
 logger = logging.getLogger("veyronica.temporal.activities")
@@ -284,6 +285,31 @@ async def draft_activity(params: dict[str, Any]) -> dict[str, Any]:
             )
 
             drafts.append(draft_action.model_dump(mode="json"))
+
+        # Execute LangGraph cognitive StateGraph validation trace
+        try:
+            lg_state = await run_langgraph_pipeline(
+                session=session,
+                store_id=store_id,
+                run_id=run_id,
+                correlation_id=correlation_id,
+            )
+            await write_audit_event(
+                session,
+                run_id=run_id,
+                correlation_id=correlation_id,
+                event_type="langgraph_pipeline_completed",
+                actor_type="agent",
+                actor_id="langgraph_orchestrator",
+                payload={
+                    "nodes": ["signal", "constraint", "draft", "route"],
+                    "status": lg_state.get("status", "routed"),
+                    "route_tier": lg_state.get("route", {}).get("tier"),
+                    "drafts_count": len(lg_state.get("drafts", [])),
+                },
+            )
+        except Exception as e:
+            logger.warning("LangGraph pipeline execution warning: %s", e)
 
         await session.commit()
         return {"drafts": drafts}
