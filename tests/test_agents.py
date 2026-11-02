@@ -79,3 +79,38 @@ def test_check_results_json_array_serialization():
     assert len(parsed) == 2
     assert parsed[0]["check_name"] == "moq"
 
+
+def test_multi_supplier_route_aggregation():
+    agent = RoutingAgent()
+    tier_order = {"auto": 0, "store_manager": 1, "regional_manager": 2}
+    risk_order = {"low": 0, "medium": 1, "high": 2}
+
+    # Draft 1: Low risk, auto-approved (<= 10000)
+    checks1 = [
+        CheckResult(check_name="moq", status="PASS", reason="ok", numeric_evidence={}),
+        CheckResult(check_name="budget_headroom", status="PASS", reason="ok", numeric_evidence={}),
+    ]
+    route1 = agent.route_draft(checks1, Decimal("8000"), True)
+    assert route1["tier"] == "auto"
+
+    # Draft 2: High value, regional manager required
+    checks2 = [
+        CheckResult(check_name="moq", status="PASS", reason="ok", numeric_evidence={}),
+        CheckResult(check_name="budget_headroom", status="FLAG", reason="70%", numeric_evidence={}),
+    ]
+    route2 = agent.route_draft(checks2, Decimal("150000"), True)
+    assert route2["tier"] == "regional_manager"
+
+    # Aggregated run level
+    highest_tier = "auto"
+    highest_risk = "low"
+    for r in [route1, route2]:
+        if tier_order[r["tier"]] > tier_order[highest_tier]:
+            highest_tier = r["tier"]
+        if risk_order[r["risk_class"]] > risk_order[highest_risk]:
+            highest_risk = r["risk_class"]
+
+    assert highest_tier == "regional_manager"
+    assert highest_risk == "high"
+
+

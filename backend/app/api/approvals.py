@@ -196,11 +196,29 @@ async def _decide(
         },
     )
 
-    # Update draft_actions status
+    # Resolve any sibling pending approval requests for the same run
+    await db.execute(
+        text("""
+            UPDATE approval_requests
+            SET status = :status, decided_by = :decided_by, decided_by_role = :role,
+                decided_at = :decided_at, rejection_reason = :reason
+            WHERE run_id = :run_id AND status = 'pending'
+        """),
+        {
+            "status": outcome,
+            "decided_by": body.approver_id,
+            "role": approver["role"],
+            "decided_at": now,
+            "reason": body.reason if outcome == "rejected" else None,
+            "run_id": str(approval["run_id"]),
+        },
+    )
+
+    # Update draft_actions status for all drafts in the run
     new_draft_status = "approved" if outcome == "approved" else "rejected"
     await db.execute(
-        text("UPDATE draft_actions SET draft_status = :status WHERE action_id = :action_id"),
-        {"status": new_draft_status, "action_id": str(approval["action_id"])},
+        text("UPDATE draft_actions SET draft_status = :status WHERE run_id = :run_id"),
+        {"status": new_draft_status, "run_id": str(approval["run_id"])},
     )
 
     # Update run status

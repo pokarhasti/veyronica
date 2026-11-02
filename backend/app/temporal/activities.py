@@ -293,28 +293,61 @@ async def draft_activity(params: dict[str, Any]) -> dict[str, Any]:
 async def route_activity(params: dict[str, Any]) -> dict[str, Any]:
     drafts = params["drafts"]
     if not drafts:
-        return {"tier": "auto", "risk_class": "low", "assigned_role": None}
+        return {"tier": "auto", "risk_class": "low", "assigned_role": None, "routes": []}
 
-    primary = drafts[0]
     routing_agent = RoutingAgent()
+    tier_order = {"auto": 0, "store_manager": 1, "regional_manager": 2}
+    risk_order = {"low": 0, "medium": 1, "high": 2}
+
+    highest_tier = "auto"
+    highest_risk = "low"
+    draft_routes = []
 
     factory = get_async_session_factory()
     async with factory() as session:
-        sup_id = primary["tool_args"]["supplier_id"]
-        sup_res = await session.execute(
-            text("SELECT approved FROM suppliers WHERE supplier_id = :id"),
-            {"id": sup_id},
-        )
-        sup_row = sup_res.mappings().first()
-        sup_approved = bool(sup_row["approved"]) if sup_row else True
+        for draft in drafts:
+            sup_id = draft["tool_args"]["supplier_id"]
+            sup_res = await session.execute(
+                text("SELECT approved FROM suppliers WHERE supplier_id = :id"),
+                {"id": sup_id},
+            )
+            sup_row = sup_res.mappings().first()
+            sup_approved = bool(sup_row["approved"]) if sup_row else True
 
-        checks = [CheckResult(**c) for c in primary["check_results"]]
-        route_info = routing_agent.route_draft(
-            checks=checks,
-            total_value=Decimal(str(primary["total_value"])),
-            supplier_approved=sup_approved,
-        )
-        return route_info
+            checks = [CheckResult(**c) for c in draft["check_results"]]
+            route_info = routing_agent.route_draft(
+                checks=checks,
+                total_value=Decimal(str(draft["total_value"])),
+                supplier_approved=sup_approved,
+            )
+            draft_routes.append({"action_id": draft["action_id"], **route_info})
+
+            if tier_order.get(route_info["tier"], 0) > tier_order.get(highest_tier, 0):
+                highest_tier = route_info["tier"]
+
+            if risk_order.get(route_info["risk_class"], 0) > risk_order.get(highest_risk, 0):
+                highest_risk = route_info["risk_class"]
+
+            # Update draft_actions risk_class in db
+            await session.execute(
+                text("UPDATE draft_actions SET risk_class = :rc WHERE action_id = :aid"),
+                {"rc": route_info["risk_class"], "aid": uuid.UUID(draft["action_id"])},
+            )
+
+        await session.commit()
+
+    assigned_role = None
+    if highest_tier == "store_manager":
+        assigned_role = "store_manager"
+    elif highest_tier == "regional_manager":
+        assigned_role = "regional_manager"
+
+    return {
+        "tier": highest_tier,
+        "risk_class": highest_risk,
+        "assigned_role": assigned_role,
+        "routes": draft_routes,
+    }
 
 
 @activity.defn
@@ -324,9 +357,7 @@ async def create_approval_activity(params: dict[str, Any]) -> dict[str, Any]:
     drafts = params["drafts"]
     route = params["route"]
 
-    approval_id = str(uuid.uuid4())
-    primary_draft = drafts[0]
-    action_id = primary_draft["action_id"]
+    approval_ids: list[str] = []
 
     factory = get_async_session_factory()
     async with factory() as session:
@@ -343,43 +374,57 @@ async def create_approval_activity(params: dict[str, Any]) -> dict[str, Any]:
             {"now": now, "run_id": uuid.UUID(run_id)},
         )
 
-        # Insert approval request
-        await session.execute(
-            text("""
-                INSERT INTO approval_requests (
-                    approval_id, action_id, run_id, assigned_role, requested_at, status
-                ) VALUES (
-                    :approval_id, :action_id, :run_id, :assigned_role, :requested_at, 'pending'
-                )
-            """),
-            {
-                "approval_id": uuid.UUID(approval_id),
-                "action_id": uuid.UUID(action_id),
-                "run_id": uuid.UUID(run_id),
-                "assigned_role": route["assigned_role"],
-                "requested_at": now,
-            },
-        )
+        for draft in drafts:
+            app_id = str(uuid.uuid4())
+            approval_ids.append(app_id)
+            action_id = draft["action_id"]
 
-        # Record approval_requested audit event
-        await write_audit_event(
-            session,
-            run_id=run_id,
-            correlation_id=correlation_id,
-            event_type="approval_requested",
-            actor_type="system",
-            actor_id="temporal_approval_gate",
-            payload={
-                "approval_id": approval_id,
-                "action_id": action_id,
-                "assigned_role": route["assigned_role"],
-                "risk_class": route["risk_class"],
-            },
-        )
+            # Update draft_status to pending_approval
+            await session.execute(
+                text("UPDATE draft_actions SET draft_status = 'pending_approval' WHERE action_id = :action_id"),
+                {"action_id": uuid.UUID(action_id)},
+            )
+
+            # Insert approval request
+            await session.execute(
+                text("""
+                    INSERT INTO approval_requests (
+                        approval_id, action_id, run_id, assigned_role, requested_at, status
+                    ) VALUES (
+                        :approval_id, :action_id, :run_id, :assigned_role, :requested_at, 'pending'
+                    )
+                """),
+                {
+                    "approval_id": uuid.UUID(app_id),
+                    "action_id": uuid.UUID(action_id),
+                    "run_id": uuid.UUID(run_id),
+                    "assigned_role": route["assigned_role"],
+                    "requested_at": now,
+                },
+            )
+
+            # Record approval_requested audit event
+            await write_audit_event(
+                session,
+                run_id=run_id,
+                correlation_id=correlation_id,
+                event_type="approval_requested",
+                actor_type="system",
+                actor_id="temporal_approval_gate",
+                payload={
+                    "approval_id": app_id,
+                    "action_id": action_id,
+                    "assigned_role": route["assigned_role"],
+                    "risk_class": route["risk_class"],
+                },
+            )
 
         await session.commit()
 
-    return {"approval_id": approval_id}
+    return {
+        "approval_id": approval_ids[0] if approval_ids else "",
+        "approval_ids": approval_ids,
+    }
 
 
 @activity.defn
@@ -400,6 +445,15 @@ async def record_rejection_activity(params: dict[str, Any]) -> dict[str, Any]:
                 WHERE run_id = :run_id
             """),
             {"now": now, "run_id": uuid.UUID(run_id)},
+        )
+
+        await session.execute(
+            text("""
+                UPDATE draft_actions
+                SET draft_status = 'rejected'
+                WHERE run_id = :run_id
+            """),
+            {"run_id": uuid.UUID(run_id)},
         )
 
         await write_audit_event(
@@ -445,6 +499,12 @@ async def execute_activity(params: dict[str, Any]) -> dict[str, Any]:
             draft_obj = DraftAction(**d)
             res = await agent.execute_draft(draft_obj)
             exec_results.append(res)
+
+            # Mark draft action executed
+            await session.execute(
+                text("UPDATE draft_actions SET draft_status = 'executed' WHERE action_id = :aid"),
+                {"aid": uuid.UUID(d["action_id"])},
+            )
 
             # Record action_executed audit event
             await write_audit_event(

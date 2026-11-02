@@ -171,26 +171,53 @@ def create_replenishment_graph(session: AsyncSession) -> StateGraph:
     async def route_node(state: ReplenishmentState) -> dict[str, Any]:
         drafts = state.get("drafts", [])
         if not drafts:
-            return {"route": {"tier": "auto", "risk_class": "low", "assigned_role": None}}
+            return {"route": {"tier": "auto", "risk_class": "low", "assigned_role": None, "routes": []}}
 
-        primary_draft = drafts[0]
         routing_agent = RoutingAgent()
+        tier_order = {"auto": 0, "store_manager": 1, "regional_manager": 2}
+        risk_order = {"low": 0, "medium": 1, "high": 2}
 
-        sup_id = primary_draft.tool_args.get("supplier_id", "")
-        sup_res = await session.execute(
-            text("SELECT approved FROM suppliers WHERE supplier_id = :id"),
-            {"id": sup_id},
-        )
-        sup_row = sup_res.mappings().first()
-        sup_approved = bool(sup_row["approved"]) if sup_row else True
+        highest_tier = "auto"
+        highest_risk = "low"
+        routes = []
 
-        route_info = routing_agent.route_draft(
-            checks=primary_draft.check_results,
-            total_value=primary_draft.total_value,
-            supplier_approved=sup_approved,
-        )
+        for draft in drafts:
+            sup_id = draft.tool_args.get("supplier_id", "")
+            sup_res = await session.execute(
+                text("SELECT approved FROM suppliers WHERE supplier_id = :id"),
+                {"id": sup_id},
+            )
+            sup_row = sup_res.mappings().first()
+            sup_approved = bool(sup_row["approved"]) if sup_row else True
 
-        return {"route": route_info, "status": "routed"}
+            route_info = routing_agent.route_draft(
+                checks=draft.check_results,
+                total_value=draft.total_value,
+                supplier_approved=sup_approved,
+            )
+            routes.append(route_info)
+
+            if tier_order.get(route_info["tier"], 0) > tier_order.get(highest_tier, 0):
+                highest_tier = route_info["tier"]
+
+            if risk_order.get(route_info["risk_class"], 0) > risk_order.get(highest_risk, 0):
+                highest_risk = route_info["risk_class"]
+
+        assigned_role = None
+        if highest_tier == "store_manager":
+            assigned_role = "store_manager"
+        elif highest_tier == "regional_manager":
+            assigned_role = "regional_manager"
+
+        return {
+            "route": {
+                "tier": highest_tier,
+                "risk_class": highest_risk,
+                "assigned_role": assigned_role,
+                "routes": routes,
+            },
+            "status": "routed",
+        }
 
     # Register nodes and flow
     workflow.add_node("signal", signal_node)
