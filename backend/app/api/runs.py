@@ -71,10 +71,26 @@ async def get_run(run_id: str, db: AsyncSession = Depends(get_db)):
     )
     events = [dict(r) for r in audit_result.mappings().all()]
 
+    # Executed Ginesys purchase orders
+    po_result = await db.execute(
+        text("SELECT * FROM purchase_orders WHERE run_id = :run_id ORDER BY created_at"),
+        {"run_id": run_id},
+    )
+    purchase_orders = [dict(r) for r in po_result.mappings().all()]
+
+    # Dispatched supplier confirmation emails
+    email_result = await db.execute(
+        text("SELECT * FROM sent_emails WHERE run_id = :run_id ORDER BY created_at"),
+        {"run_id": run_id},
+    )
+    sent_emails = [dict(r) for r in email_result.mappings().all()]
+
     return {
         **dict(run),
         "signals": signals,
         "drafts": drafts,
         "approval_requests": approvals,
         "audit_events": events,
+        "purchase_orders": purchase_orders,
+        "sent_emails": sent_emails,
     }

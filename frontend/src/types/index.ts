@@ -90,11 +90,34 @@ export interface RunSummary {
   approval_wait_ms?: number;
 }
 
+export interface PurchaseOrder {
+  po_id: string;
+  action_id: string;
+  run_id: string;
+  store_id: string;
+  supplier_id: string;
+  lines: any;
+  total_value: number;
+  created_at: string;
+}
+
+export interface SentEmail {
+  email_id: string;
+  action_id: string;
+  run_id: string;
+  to_email: string;
+  subject: string;
+  body: string;
+  created_at: string;
+}
+
 export interface RunDetail extends RunSummary {
   signals: ReplenishmentSignal[];
   drafts: DraftAction[];
   approval_requests: ApprovalRequest[];
   audit_events: AuditEvent[];
+  purchase_orders?: PurchaseOrder[];
+  sent_emails?: SentEmail[];
 }
 
 export interface DashboardMetrics {

@@ -4,7 +4,7 @@ import { ApproverInfo, RunDetail } from '../types';
 import { DecisionCard } from '../components/DecisionCard';
 import { Timeline } from '../components/Timeline';
 import { CheckRow } from '../components/CheckRow';
-import { ArrowLeft, Clock, RefreshCw, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Clock, RefreshCw, AlertCircle, Database, Mail, ShieldCheck } from 'lucide-react';
 
 interface RunDetailPageProps {
   runId: string;
@@ -321,6 +321,105 @@ export const RunDetailPage: React.FC<RunDetailPageProps> = ({ runId, onBack, cur
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Executed Enterprise Actions (Ginesys ERP & Supplier Dispatch) */}
+      {((run.purchase_orders && run.purchase_orders.length > 0) || (run.sent_emails && run.sent_emails.length > 0)) && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div className="flex items-center space-x-3">
+              <span className="p-2 rounded-lg bg-emerald-950/80 border border-emerald-800/80 text-emerald-400">
+                <ShieldCheck className="w-5 h-5" />
+              </span>
+              <div>
+                <h3 className="text-base font-bold text-slate-100">
+                  Executed Enterprise Actions (Ginesys ERP & Supplier Dispatch)
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Confirmed post-approval dual writes executed durably via Temporal
+                </p>
+              </div>
+            </div>
+            <span className="text-xs font-mono px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+              Dual Execution Confirmed
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Ginesys ERP PO Confirmation Card */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2 text-indigo-400 font-semibold text-xs uppercase tracking-wider">
+                <Database className="w-4 h-4" />
+                <span>1. Confirmed Ginesys ERP Purchase Order</span>
+              </div>
+              {run.purchase_orders && run.purchase_orders.length > 0 ? (
+                run.purchase_orders.map((po) => (
+                  <div key={po.po_id} className="bg-slate-950 border border-slate-800 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <div>
+                        <span className="text-slate-400">ERP PO Ref: </span>
+                        <span className="font-mono font-bold text-indigo-300">{po.po_id}</span>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
+                        CONFIRMED (ERP Write)
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-slate-300">
+                      <span>Vendor: <strong className="text-slate-100">{po.supplier_id}</strong></span>
+                      <span className="font-mono font-bold text-emerald-400">
+                        ₹{Number(po.total_value).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 font-mono">
+                      Created at {new Date(po.created_at).toLocaleString()}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-xs text-slate-500 bg-slate-950 p-4 rounded-lg border border-slate-800">
+                  No Ginesys ERP PO records generated yet.
+                </div>
+              )}
+            </div>
+
+            {/* Dispatched Supplier Notification Email Card */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2 text-emerald-400 font-semibold text-xs uppercase tracking-wider">
+                <Mail className="w-4 h-4" />
+                <span>2. Dispatched Supplier Confirmation Email</span>
+              </div>
+              {run.sent_emails && run.sent_emails.length > 0 ? (
+                run.sent_emails.map((em) => (
+                  <div key={em.email_id} className="bg-slate-950 border border-slate-800 rounded-lg p-4 space-y-2.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-slate-400">Dispatched To: </span>
+                        <span className="font-mono text-indigo-300">{em.to_email}</span>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
+                        SENT (SMTP Dispatch)
+                      </span>
+                    </div>
+                    <div className="text-slate-300">
+                      <span className="text-slate-400 font-semibold">Subject: </span>
+                      {em.subject}
+                    </div>
+                    <div className="p-3 rounded bg-slate-900/60 border border-slate-800/80 font-mono text-[11px] text-slate-300 whitespace-pre-wrap max-h-40 overflow-y-auto leading-relaxed">
+                      {em.body}
+                    </div>
+                    <div className="text-[11px] text-slate-500 font-mono pt-1">
+                      Delivered at {new Date(em.created_at).toLocaleString()}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-xs text-slate-500 bg-slate-950 p-4 rounded-lg border border-slate-800">
+                  No supplier emails dispatched yet.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
