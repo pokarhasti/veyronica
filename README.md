@@ -1,117 +1,140 @@
 # Veyronica — Governed Agentic Replenishment Platform
 
 > **V-Mart Governed Agentic Replenishment Platform**  
-> *Deterministic Separation: Code decides, AI explains.*
+> *Deterministic Separation: Code decides, AI explains.*  
+> **SIH 2026 Production Build** • [GitHub Repository](https://github.com/YugPatel11/Veyronica)
 
 ---
 
-## 1. Overview
+## 1. Executive Summary
 
-**Veyronica** is a governed agentic execution layer modeled after V-Mart's 497 stores across Tier-II, Tier-III, and Tier-IV India operating on Ginesys retail ERP.
+**Veyronica** is a governed agentic execution platform designed for retail store replenishment, modeled on V-Mart's 497 stores across Tier-II, Tier-III, and Tier-IV India operating on Ginesys ERP.
 
-In standard procurement, purchase order creation takes 6–10 minutes per document (reduced to ~1 min with DigiProc). Veyronica closes the loop between automated replenishment analysis and durable, human-gated ERP execution:
-- **Autonomous Signal Detection:** Continuously evaluates inventory levels against 6-day reorder thresholds and 14-day target covers.
-- **Deterministic Separation:** "Code decides, AI explains." Constraint evaluation (MOQ, lead times, budget headroom, credit limits) runs purely in deterministic code. The LLM is confined strictly to drafting explanatory rationales and supplier notification emails.
-- **Durable Approval Gate:** Powered by **Temporal Python SDK**, the workflow structurally pauses at human approval checkpoints (`workflow.wait_condition`), surviving server restarts and network interruptions indefinitely.
-- **Dual Gated Actions:** Approved execution creates the ERP purchase order AND dispatches the supplier confirmation email.
-- **Immutable Append-Only Audit Trail:** Postgres triggers strictly block updates and deletes, recording every transition and decision.
+In conventional retail procurement, purchase order creation requires **6–10 minutes per document** (reduced to **~1 minute** with Supplymint's DigiProc). Veyronica automates signal evaluation down to **~14 seconds** while enforcing a deterministic, human-gated execution loop:
+1. **Autonomous Signal Detection:** Monitors inventory against 6-day reorder thresholds and calculates replenishment quantities to restore 14-day target covers.
+2. **Deterministic Separation ("Code decides, AI explains"):** All business rules (MOQ, delivery lead times, store budget headroom, supplier credit limits, risk tiers) run strictly in deterministic Python. The LLM is confined strictly to generating human-readable rationales and drafting supplier notification emails.
+3. **Durable Approval Gate (Temporal HITL):** Workflows pause at human approval gates (`workflow.wait_condition`), surviving process termination, server restarts, and connection drops without sleep or in-memory timers.
+4. **Dual Gated Actions:** Approving an order atomically triggers both the ERP purchase order creation AND the supplier notification email dispatch.
+5. **Immutable Append-Only Audit Trail:** Database triggers block `UPDATE` and `DELETE` on the `audit_events` table, preserving an unalterable history of every action.
 
 ---
 
-## 2. Architecture
+## 2. Architecture & Tech Stack
 
 ```text
-┌────────────────────────────────────────────────────────┐
-│                   Veyronica Web UI                     │
-│    (React 18 + Vite + TypeScript + Tailwind + Recharts) │
-│    - Global "Acting as" Persona Switcher               │
-│    - Side-by-side "Code decides, AI explains" Card     │
-└───────────────────────────┬────────────────────────────┘
-                            │ REST / SSE
-┌───────────────────────────▼────────────────────────────┐
-│                    FastAPI Backend                     │
-│    - REST Endpoints (/workflows, /approvals, /audit)   │
-│    - Single source-of-truth policy routing             │
-│    - Persistence-before-signal approval contract       │
-└───────────────────────────┬────────────────────────────┘
-                            │
-              ┌─────────────┴─────────────┐
-              ▼                           ▼
-┌───────────────────────────┐ ┌───────────────────────────┐
-│     Temporal Workflow     │ │       PostgreSQL          │
-│ - Durable Activity Steps  │ │ - Core runs & drafts      │
-│ - Structural Pause Gate   │ │ - Immutable audit_events  │
-│ - Signal-based Resume     │ │ - Simulated Ginesys ERP   │
-└───────────────────────────┘ └───────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                        Veyronica Web Application                       │
+│        (React 18 + Vite + TypeScript + Tailwind CSS + Recharts)        │
+│    - Global "Acting as" Persona Switcher (Store vs. Regional Manager)  │
+│    - "Code decides, AI explains" Side-by-Side Decision Card            │
+│    - Live Step Timeline & Filterable Audit Event Viewer                │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ REST / SSE
+┌───────────────────────────────────▼────────────────────────────────────┐
+│                        FastAPI Backend Engine                          │
+│    - Rest Endpoints (/workflows, /runs, /approvals, /audit)            │
+│    - Single Source-of-Truth Policy Routing Engine (Section 4.3)        │
+│    - Persistence-Before-Signal Contract with Startup Reconciliation   │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+              ┌─────────────────────┴─────────────────────┐
+              ▼                                           ▼
+┌───────────────────────────────┐           ┌───────────────────────────────┐
+│       Temporal Engine         │           │      PostgreSQL Database      │
+│  - Durable Workflow Execution │           │  - Runs, Signals & Drafts     │
+│  - wait_condition HITL Pause  │           │  - Simulated Ginesys ERP      │
+│  - Idempotent Activities      │           │  - Append-Only Audit Triggers │
+└───────────────────────────────┘           └───────────────────────────────┘
 ```
 
 ---
 
 ## 3. Quickstart & Setup
 
-### Prerequisites
-- Python 3.12+
-- Docker & Docker Compose (or local PostgreSQL and Temporal CLI)
-- Node.js 18+ (for frontend)
+### Option 1: Docker Compose (Plan A — Complete Stack)
+```bash
+# 1. Clone repository
+git clone https://github.com/YugPatel11/Veyronica.git
+cd Veyronica
 
-### Installation
+# 2. Configure environment
+cp .env.example .env
 
-1. **Clone and Setup Environment:**
-   ```bash
-   cp .env.example .env
-   ```
+# 3. Start PostgreSQL, Temporal, API, Worker, and Frontend
+docker compose up -d
 
-2. **Run with Docker Compose (Plan A):**
-   ```bash
-   docker compose up -d
-   ```
+# 4. Populate seed data
+docker compose exec api python scripts/seed.py
+```
+- Frontend UI: `http://localhost:5173`
+- Backend API Docs: `http://localhost:8000/docs`
+- Temporal Web UI: `http://localhost:8233`
 
-3. **Or Run Locally (Plan B):**
-   ```bash
-   # Backend
-   cd backend
-   pip install -e .
-   python -m app.main
+### Option 2: Local Development (Plan B)
+```bash
+# 1. Install Backend Dependencies
+cd backend
+pip install -e ".[dev]"
 
-   # Temporal Worker
-   python -m app.temporal.worker
+# 2. Run Database Migrations and Seed
+psql $DATABASE_URL < ../scripts/seed.sql
+# Or: python ../scripts/seed.py
 
-   # Frontend
-   cd ../frontend
-   npm install
-   npm run dev
-   ```
+# 3. Launch API Server
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-4. **Seed Database:**
-   ```bash
-   python scripts/seed.py
-   # Or directly: psql $DATABASE_URL < scripts/seed.sql
-   ```
+# 4. Launch Temporal Worker (in a separate terminal)
+python -m app.temporal.worker
+
+# 5. Launch Frontend (in a separate terminal)
+cd ../frontend
+npm install
+npm run dev
+```
 
 ---
 
 ## 4. 60-Second Demo Script
 
-1. **STORE-214 (Hero Scenario):**
-   - Trigger replenishment for `STORE-214`.
-   - Observe live step timeline: signal -> checks -> draft -> route -> approval gate.
-   - Switch persona to **Priya Sharma (Store Manager)**.
-   - Review Decision Card: side-by-side deterministic checks (MOQ PASS, Lead Time PASS, Budget FLAG 70%, Credit PASS) vs. AI explanation.
-   - Click **Approve** -> PO created in simulated Ginesys ERP and supplier email recorded.
-2. **STORE-087 (Auto-Approve Path):**
-   - Trigger replenishment for `STORE-087` (small order <= ₹10,000 from approved supplier).
-   - Observe automatic approval without human pause.
-3. **STORE-312 (Manager Escalation):**
-   - Trigger replenishment for `STORE-312` (budget limit exceeded).
-   - Observe automatic routing to **Anita Deshmukh (Regional Procurement Manager)**.
+| Step | Store | Persona ("Acting as") | Action & Expected Behavior |
+|---|---|---|---|
+| **1** | `STORE-214` | *Priya Sharma (Store Manager)* | Click **Run Replenishment Check**. Stock drops to 4 days across jeans and kurti SKUs. Generates ₹42,000 order to SUP-1042. Budget check returns `FLAG` (70% headroom utilized). Policy routes to **Store Manager**. Inspect Decision Card showing "Code decides, AI explains" split. Click **Approve & Execute PO** -> PO created in ERP and email sent. |
+| **2** | `STORE-087` | *Any Persona* | Select `STORE-087` and trigger check. Small order under ₹10,000 from approved supplier. All checks PASS -> **Auto-Approved** without human pause. |
+| **3** | `STORE-312` | *Anita Deshmukh (Regional Manager)* | Select `STORE-312` and trigger check. Budget spent near cap causes `FAIL` or value escalation. Policy automatically routes to **Regional Procurement Manager**. |
 
 ---
 
-## 5. Resilience & "If It Breaks" Safety Net
+## 5. Resilience & "If It Breaks" Checklist (Safety Net)
 
-| Failure Scenario | Plan A (Primary) | Plan B (Fallback) | Plan C (Safety Net) |
-|---|---|---|---|
-| **Database** | Docker Compose PostgreSQL | Local PostgreSQL on port 5432 | Managed Neon/Supabase via `DATABASE_URL` |
-| **Temporal Engine** | Local Temporal CLI / Dev Server | Docker Compose Temporal Service | Temporal Cloud Free Tier |
-| **LLM Provider** | OpenAI `gpt-4o` | Anthropic Claude / Google Gemini | Deterministic template generation (zero downtime) |
-| **Approval Interruption** | Instant resume via Temporal signal | Unsignalled approvals reconciled on API startup | Audit event verification + database state |
+| Component | Failure Mode | Plan A (Primary) | Plan B (Fallback) | Plan C (Safety Net) |
+|---|---|---|---|---|
+| **Database** | Connection loss / corrupted data | Docker PostgreSQL (`5432`) | Local PostgreSQL | Restore demo state in <10s: `psql $DATABASE_URL < scripts/seed.sql` |
+| **Temporal Engine** | Worker crash / process killed | Native Temporal auto-reconnect | Docker Compose restart | Workflows pause durably; startup reconciliation in `app/main.py` detects unsignalled approvals and resumes state cleanly |
+| **LLM Provider** | Rate-limit / API quota / offline | OpenAI `gpt-4o` | Secondary LLM provider (Anthropic / Gemini) | Automatic zero-downtime failover to deterministic templates (honestly labelled as `template`) |
+| **Approvals** | Power outage mid-decision | In-memory resume | Database persistence before signal | Double-decision protection returns `409 Conflict`; signal retried on boot |
+
+---
+
+## 6. Verification & Automated Tests
+
+All tests run cleanly with zero warnings:
+```bash
+# Run all unit and contract tests
+pytest
+
+# Test deterministic constraint checks (Section 4.2)
+pytest tests/test_checks.py
+
+# Test approval routing policy table (Section 4.3)
+pytest tests/test_policy.py
+
+# Test LLM fallback safety nets (Plan C template generation)
+pytest tests/test_llm_client.py
+
+# Test agent order sizing and hero scenario
+pytest tests/test_agents.py
+
+# Test approval role hierarchy and rejection validation
+pytest tests/test_api_approvals.py
+```
+For durability and restart procedure documentation, refer to [`tests/test_restart_durability.md`](tests/test_restart_durability.md).
