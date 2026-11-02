@@ -33,19 +33,19 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
 
   const storeScenarios: Record<string, { title: string; desc: string; expected: string; tag: string }> = {
     'STORE-214': {
-      title: 'Hero Scenario (Store Manager Approval)',
+      title: 'Hero Scenario — V-Mart Lucknow Gomtinagar (Store Manager Approval)',
       desc: 'Stock cover drops to 4 days across 3 core denim/apparel SKUs. Generates a ₹42,000 order to SUP-1042 utilizing 70% of remaining budget headroom.',
       expected: 'Routes to Store Manager (Rule 4) with Budget Headroom FLAG.',
       tag: 'Hero Demo',
     },
     'STORE-087': {
-      title: 'Small Replenishment (Auto-Approve Path)',
+      title: 'Small Replenishment — V-Mart Jaipur Vaishali (Auto-Approve Path)',
       desc: 'Small restock under ₹10,000 from fully approved supplier with all checks passing.',
       expected: 'Auto-approves without manual intervention (Rule 6).',
       tag: 'Auto-Approve',
     },
     'STORE-312': {
-      title: 'High-Value Escalation (Regional Manager)',
+      title: 'High-Value Escalation — V-Mart Patna Boring Road (Regional Manager)',
       desc: 'Store budget spent is near monthly cap (₹70,000 / ₹80,000). Reorder causes budget headroom failure or exceeds store limit.',
       expected: 'Escalates to Regional Procurement Manager (Rule 1 / Rule 3).',
       tag: 'Escalation',
@@ -82,9 +82,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
                 value={selectedStore}
                 onChange={(e) => setSelectedStore(e.target.value)}
               >
-                <option value="STORE-214">STORE-214 (New Delhi Flagship)</option>
-                <option value="STORE-087">STORE-087 (Patna Tier-II Store)</option>
-                <option value="STORE-312">STORE-312 (Varanasi Tier-III Store)</option>
+                <option value="STORE-214">STORE-214 (V-Mart Lucknow Gomtinagar)</option>
+                <option value="STORE-087">STORE-087 (V-Mart Jaipur Vaishali)</option>
+                <option value="STORE-312">STORE-312 (V-Mart Patna Boring Road)</option>
               </select>
             </div>
 
