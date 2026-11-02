@@ -61,3 +61,21 @@ def test_routing_agent_hero_scenario():
     assert res["tier"] == "store_manager"
     assert res["risk_class"] == "medium"
     assert res["assigned_role"] == "store_manager"
+
+
+def test_check_results_json_array_serialization():
+    import json
+    from app.models.domain import CheckResult
+
+    checks = [
+        CheckResult(check_name="moq", status="PASS", reason="ok", numeric_evidence={"moq": 10}),
+        CheckResult(check_name="lead_time", status="PASS", reason="ok", numeric_evidence={"days": 5}),
+    ]
+
+    # Verify serialization is a direct JSON list, not a wrapped dictionary
+    serialized = json.dumps([c.model_dump(mode="json") for c in checks])
+    parsed = json.loads(serialized)
+    assert isinstance(parsed, list)
+    assert len(parsed) == 2
+    assert parsed[0]["check_name"] == "moq"
+

@@ -6,6 +6,7 @@
 # =============================================================================
 from __future__ import annotations
 
+import json
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -254,13 +255,13 @@ async def draft_activity(params: dict[str, Any]) -> dict[str, Any]:
                     "run_id": run_uuid,
                     "action_type": draft_action.action_type,
                     "tool_name": draft_action.tool_name,
-                    "tool_args": draft_action.model_dump_json(include={"tool_args"}),
+                    "tool_args": json.dumps(draft_action.tool_args),
                     "risk_class": draft_action.risk_class,
                     "total_value": float(draft_action.total_value),
                     "rationale": draft_action.rationale,
                     "rationale_source": draft_action.rationale_source,
-                    "evidence_refs": draft_action.model_dump_json(include={"evidence_refs"}),
-                    "check_results": draft_action.model_dump_json(include={"check_results"}),
+                    "evidence_refs": json.dumps(draft_action.evidence_refs),
+                    "check_results": json.dumps([c.model_dump(mode="json") for c in draft_action.check_results]),
                     "draft_status": "draft",
                 },
             )

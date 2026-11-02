@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DraftAction, ApproverInfo } from '../types';
+import { DraftAction, ApproverInfo, CheckResult, DraftLine } from '../types';
 import { CheckRow } from './CheckRow';
 import { RiskBadge } from './RiskBadge';
 import { Modal } from './Modal';
@@ -29,10 +29,18 @@ export const DecisionCard: React.FC<DecisionCardProps> = ({
   // Role authority check: regional_manager satisfies both roles; store_manager only satisfies store_manager
   const canDecide = currentApprover?.role === 'regional_manager' || currentApprover?.role === assignedRole;
 
-  const lines = draft.tool_args.lines || [];
-  const totalUnits = lines.reduce((acc, l) => acc + (l.qty || 0), 0);
-  const supplierId = draft.tool_args.supplier_id || '';
-  const supplierName = draft.tool_args.supplier_name || supplierId;
+  // Defensive normalization for check_results (array vs wrapped object)
+  const checkResults: CheckResult[] = Array.isArray(draft.check_results)
+    ? draft.check_results
+    : (draft.check_results as any)?.check_results && Array.isArray((draft.check_results as any).check_results)
+    ? (draft.check_results as any).check_results
+    : [];
+
+  const toolArgs = (draft.tool_args as any)?.tool_args || draft.tool_args || {};
+  const lines: DraftLine[] = toolArgs.lines || [];
+  const totalUnits = lines.reduce((acc: number, l: DraftLine) => acc + (l.qty || 0), 0);
+  const supplierId = toolArgs.supplier_id || '';
+  const supplierName = toolArgs.supplier_name || supplierId;
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
@@ -138,7 +146,7 @@ export const DecisionCard: React.FC<DecisionCardProps> = ({
           </div>
 
           <div className="space-y-3">
-            {draft.check_results.map((c, i) => (
+            {checkResults.map((c, i) => (
               <CheckRow key={i} check={c} />
             ))}
           </div>
