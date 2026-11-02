@@ -15,6 +15,88 @@ from app.config import get_settings
 logger = logging.getLogger("veyronica.llm")
 
 
+def verify_no_hallucinated_numbers(
+    text: str,
+    store_id: str,
+    lines: list[dict[str, Any]],
+    target_cover_days: int = 14,
+    extra_allowed: set[int | float | str] | None = None,
+) -> tuple[bool, list[str]]:
+    """
+    Deterministic Post-Check Guard:
+    Regex-extracts all numeric tokens from the generated explanation and verifies
+    every number matches authorized evidence.
+    Returns: (is_valid: bool, unauthorized_numbers: list[str])
+    """
+    import re
+
+    # 1. Collect all authorized numbers from evidence
+    authorized_numbers: set[float | int] = {
+        0, 1, 2, 3, 5, 7, 10, 14, 24, 30, 48, 100,
+        len(lines), target_cover_days,
+    }
+    authorized_strings: set[str] = set()
+
+    # Store ID digits (e.g. '087' and 87)
+    for d in re.findall(r"\d+", store_id):
+        authorized_strings.add(d)
+        authorized_numbers.add(int(d))
+
+    for l in lines:
+        for k in (
+            "qty", "current_stock", "moq", "lead_time_days",
+            "unit_cost", "line_value", "sales_velocity_7d", "days_of_cover",
+        ):
+            if k in l and l[k] is not None:
+                try:
+                    val = float(str(l[k]))
+                    authorized_numbers.add(val)
+                    if val.is_integer():
+                        authorized_numbers.add(int(val))
+                except Exception:
+                    pass
+
+        # SKU digits (e.g. '8821' in 'SKU-8821')
+        if "sku" in l:
+            for sd in re.findall(r"\d+", str(l["sku"])):
+                authorized_strings.add(sd)
+                authorized_numbers.add(int(sd))
+
+    if extra_allowed:
+        for ea in extra_allowed:
+            try:
+                val = float(str(ea))
+                authorized_numbers.add(val)
+                if val.is_integer():
+                    authorized_numbers.add(int(val))
+            except Exception:
+                authorized_strings.add(str(ea))
+
+    # 2. Extract numeric tokens from generated text
+    raw_tokens = re.findall(r"\b(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?\b", text)
+    unauthorized: list[str] = []
+
+    for tok in raw_tokens:
+        clean = tok.replace(",", "")
+        try:
+            num = float(clean)
+            as_int = int(num) if num.is_integer() else None
+
+            if (
+                num in authorized_numbers
+                or (as_int is not None and as_int in authorized_numbers)
+                or clean in authorized_strings
+                or tok in authorized_strings
+            ):
+                continue
+            else:
+                unauthorized.append(tok)
+        except ValueError:
+            continue
+
+    return len(unauthorized) == 0, unauthorized
+
+
 class LLMClient:
     """
     LLM Client strictly configured for Google Gemini and xAI Grok.
@@ -41,6 +123,7 @@ class LLMClient:
         Iterates through up to 8 Gemini API keys in sequence.
         If a key dies (quota, network, 429), it automatically falls over to the next key.
         Falls back to Grok if all Gemini keys fail, then to Plan C template.
+        Validates output against Deterministic Numeric Hallucination Guard.
         Returns: (rationale_text, source: 'ai_generated' | 'template')
         """
         gemini_keys = self.settings.all_gemini_api_keys
@@ -56,6 +139,19 @@ class LLMClient:
                     api_key=key,
                 )
                 if text and len(text.strip()) > 10:
+                    is_valid, stray_nums = verify_no_hallucinated_numbers(
+                        text, store_id, lines, target_cover_days
+                    )
+                    if not is_valid:
+                        logger.warning(
+                            "Hallucination guard triggered! Unauthorized numbers found in Gemini output: %s. "
+                            "Falling back to template.",
+                            stray_nums,
+                        )
+                        return (
+                            self._template_rationale(store_id, lines, target_cover_days),
+                            "template",
+                        )
                     return text.strip(), "ai_generated"
             except Exception as e:
                 logger.warning("Gemini API key #%d failed (%s); trying next available key...", idx, e)
@@ -70,6 +166,19 @@ class LLMClient:
                     api_key=grok_key,
                 )
                 if text and len(text.strip()) > 10:
+                    is_valid, stray_nums = verify_no_hallucinated_numbers(
+                        text, store_id, lines, target_cover_days
+                    )
+                    if not is_valid:
+                        logger.warning(
+                            "Hallucination guard triggered! Unauthorized numbers found in Grok output: %s. "
+                            "Falling back to template.",
+                            stray_nums,
+                        )
+                        return (
+                            self._template_rationale(store_id, lines, target_cover_days),
+                            "template",
+                        )
                     return text.strip(), "ai_generated"
             except Exception as e:
                 logger.warning("Grok fallback rationale generation failed: %s", e)

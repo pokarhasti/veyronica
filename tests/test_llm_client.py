@@ -118,3 +118,31 @@ async def test_gemini_multi_key_failover(monkeypatch):
     assert attempted_keys == ["bad_key_1", "good_key_2"]
 
 
+def test_numeric_hallucination_guard_clean():
+    from app.llm.client import verify_no_hallucinated_numbers
+
+    lines = [
+        {"sku": "SKU-8821", "sku_name": "Men's Slim Jeans", "qty": 60, "unit_cost": 700, "line_value": 42000, "current_stock": 24, "days_of_cover": 4.0}
+    ]
+    # Rationale has 60, 14, 214, 8821, 42,000 -> all authorized
+    text = "V-Mart Store STORE-214 requires 60 units of SKU-8821 totaling ₹42,000 to restore 14 days of cover."
+    is_valid, stray = verify_no_hallucinated_numbers(text, "STORE-214", lines, target_cover_days=14)
+    assert is_valid is True
+    assert len(stray) == 0
+
+
+def test_numeric_hallucination_guard_catches_unauthorized_number():
+    from app.llm.client import verify_no_hallucinated_numbers
+
+    lines = [
+        {"sku": "SKU-8821", "sku_name": "Men's Slim Jeans", "qty": 60, "unit_cost": 700, "line_value": 42000, "current_stock": 24}
+    ]
+    # Rationale invents "saving ₹999,999" and "excess 450 units" -> unauthorized!
+    text = "Reordering 60 units will unlock savings of ₹999,999 and prevent 450 stockout losses."
+    is_valid, stray = verify_no_hallucinated_numbers(text, "STORE-214", lines, target_cover_days=14)
+    assert is_valid is False
+    assert "999,999" in stray or "999999" in stray
+    assert "450" in stray
+
+
+
