@@ -266,7 +266,7 @@ async def _decide(
         await db.execute(
             text("""
                 UPDATE draft_actions
-                SET tool_args = :tool_args::jsonb, total_value = :new_total
+                SET tool_args = CAST(:tool_args AS JSONB), total_value = :new_total
                 WHERE action_id = :action_id
             """),
             {

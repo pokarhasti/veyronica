@@ -121,7 +121,7 @@ class PostgresERPAdapter:
         await self.session.execute(
             text("""
                 INSERT INTO purchase_orders (po_id, action_id, run_id, store_id, supplier_id, lines, total_value, created_at)
-                VALUES (:po_id, :action_id, :run_id, :store_id, :supplier_id, :lines::jsonb, :total_value, NOW())
+                VALUES (:po_id, :action_id, :run_id, :store_id, :supplier_id, CAST(:lines AS JSONB), :total_value, NOW())
             """),
             {
                 "po_id": po_uuid,

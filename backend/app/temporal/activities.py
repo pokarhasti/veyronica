@@ -60,7 +60,7 @@ async def signal_activity(params: dict[str, Any]) -> dict[str, Any]:
             await session.execute(
                 text("""
                     INSERT INTO signals (signal_id, run_id, payload, created_at)
-                    VALUES (:sig_id, :run_id, :payload::jsonb, :created_at)
+                    VALUES (:sig_id, :run_id, CAST(:payload AS JSONB), :created_at)
                     ON CONFLICT (signal_id) DO NOTHING
                 """),
                 {
@@ -245,9 +245,9 @@ async def draft_activity(params: dict[str, Any]) -> dict[str, Any]:
                         risk_class, total_value, rationale, rationale_source,
                         evidence_refs, check_results, draft_status, created_at
                     ) VALUES (
-                        :action_id, :run_id, :action_type, :tool_name, :tool_args::jsonb,
+                        :action_id, :run_id, :action_type, :tool_name, CAST(:tool_args AS JSONB),
                         :risk_class, :total_value, :rationale, :rationale_source,
-                        :evidence_refs::jsonb, :check_results::jsonb, :draft_status, NOW()
+                        CAST(:evidence_refs AS JSONB), CAST(:check_results AS JSONB), :draft_status, NOW()
                     )
                     ON CONFLICT (action_id) DO NOTHING
                 """),

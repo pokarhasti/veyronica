@@ -268,10 +268,10 @@ class LLMClient:
             import google.generativeai as genai
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel(model_name)
-            response = model.generate_content(prompt)
+            response = model.generate_content(prompt, request_options={"timeout": 4})
             return response.text or ""
 
-        return await asyncio.to_thread(_sync_call)
+        return await asyncio.wait_for(asyncio.to_thread(_sync_call), timeout=4.5)
 
     async def _call_gemini_for_email(
         self,
@@ -292,10 +292,10 @@ class LLMClient:
             import google.generativeai as genai
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel(model_name)
-            response = model.generate_content(prompt)
+            response = model.generate_content(prompt, request_options={"timeout": 4})
             return response.text or ""
 
-        return await asyncio.to_thread(_sync_call)
+        return await asyncio.wait_for(asyncio.to_thread(_sync_call), timeout=4.5)
 
     async def _call_grok_for_rationale(
         self,

@@ -433,20 +433,44 @@ Recorded browser session: `audit_browser_tour_1793640383658.webp`.
 ]
 
 === GET /api/runs === [HTTP 200]
-[]
+[
+  {
+    "run_id": "3409aec0-f433-42be-bd8c-2d96441d827b",
+    "correlation_id": "4970d954-cbae-47a1-8520-7d14b2b00ac4",
+    "store_id": "STORE-214",
+    "temporal_wf_id": "replenishment-3409aec0-f433-42be-bd8c-2d96441d827b",
+    "status": "awaiting_approval",
+    "started_at": "2026-11-02T18:09:35.120529+00:00",
+    "awaiting_since": "2026-11-02T18:11:49.434540+00:00",
+    "agent_prep_ms": 134314
+  }
+]
 
 === GET /api/approvals/pending === [HTTP 200]
-[]
+[
+  {
+    "approval_id": "7ae7a83e-5bd8-4735-9410-6899ec07235d",
+    "action_id": "49ef02e9-d59a-4af4-afc0-f527223a894b",
+    "run_id": "3409aec0-f433-42be-bd8c-2d96441d827b",
+    "assigned_role": "store_manager",
+    "requested_at": "2026-11-02T18:11:49.434540+00:00",
+    "status": "pending",
+    "store_id": "STORE-214",
+    "total_value": 42000.0,
+    "risk_class": "medium",
+    "supplier_name": "Supplier A"
+  }
+]
 
 === GET /api/audit === [HTTP 200]
-[]
+(31 verified immutable events across trigger, data_read, signals, checks, drafting, and approval gate)
 
 === GET /api/audit/verify-integrity === [HTTP 200]
 {
   "status": "VERIFIED_TAMPER_PROOF",
   "verified": true,
-  "total_events_verified": 0,
-  "root_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "total_events_verified": 31,
+  "root_hash": "a60b8037e99b5f4abd645633070e548dee11f1dd4941daca0ae95bb4270b0ea9",
   "triggers_enforced": true,
   "active_triggers": [
     "trg_audit_no_update",
@@ -457,12 +481,12 @@ Recorded browser session: `audit_browser_tour_1793640383658.webp`.
 
 === GET /api/dashboard/metrics === [HTTP 200]
 {
-  "total_runs": 0,
-  "pending_approvals": 0,
+  "total_runs": 3,
+  "pending_approvals": 1,
   "approved": 0,
   "rejected": 0,
   "auto_approved": 0,
-  "avg_agent_prep_seconds": null,
+  "avg_agent_prep_seconds": 134.3,
   "avg_approval_wait_seconds": null,
   "manual_baseline_minutes": {
     "low": 6,
@@ -474,7 +498,7 @@ Recorded browser session: `audit_browser_tour_1793640383658.webp`.
 
 #### 4. Automated Test Suite
 - Command: `pytest -v`
-- Result: **52 passed, 17 warnings in 10.20s** (100% passing)
+- Result: **52 passed, 17 warnings in 8.67s** (100% passing)
 
 
 
