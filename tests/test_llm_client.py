@@ -7,9 +7,20 @@ import pytest
 from app.llm.client import LLMClient
 
 
+def _clear_keys(client, monkeypatch):
+    monkeypatch.setattr(client.settings, "gemini_api_key", "")
+    monkeypatch.setattr(client.settings, "gemini_api_keys", "")
+    monkeypatch.setattr(client.settings, "grok_api_key", "")
+    monkeypatch.setattr(client.settings, "llm_api_key", "")
+    monkeypatch.setattr(client.settings, "llm_fallback_api_key", "")
+    for i in range(1, 9):
+        monkeypatch.setattr(client.settings, f"gemini_api_key_{i}", "")
+
+
 @pytest.mark.asyncio
-async def test_llm_client_fallback_rationale():
+async def test_llm_client_fallback_rationale(monkeypatch):
     client = LLMClient()
+    _clear_keys(client, monkeypatch)
     lines = [
         {
             "sku": "SKU-8821",
@@ -29,8 +40,9 @@ async def test_llm_client_fallback_rationale():
 
 
 @pytest.mark.asyncio
-async def test_llm_client_fallback_email():
+async def test_llm_client_fallback_email(monkeypatch):
     client = LLMClient()
+    _clear_keys(client, monkeypatch)
     lines = [
         {"sku": "SKU-8821", "sku_name": "Men's Slim Jeans", "qty": 60, "unit_cost": 360},
     ]

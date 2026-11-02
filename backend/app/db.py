@@ -16,10 +16,32 @@ class Base(DeclarativeBase):
     pass
 
 
+def _normalize_async_url(url: str) -> str:
+    if not url:
+        return url
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if "sslmode=require" in url:
+        url = url.replace("sslmode=require", "ssl=require")
+    return url
+
+
+def _normalize_sync_url(url: str) -> str:
+    if not url:
+        return url
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    elif url.startswith("postgresql+asyncpg://"):
+        url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    return url
+
+
 def _build_async_engine():
     settings = get_settings()
     return create_async_engine(
-        settings.database_url,
+        _normalize_async_url(settings.database_url),
         echo=False,
         pool_pre_ping=True,  # detect stale connections early
         pool_size=10,
@@ -30,7 +52,7 @@ def _build_async_engine():
 def _build_sync_engine():
     settings = get_settings()
     return create_engine(
-        settings.database_url_sync,
+        _normalize_sync_url(settings.database_url_sync or settings.database_url),
         echo=False,
         pool_pre_ping=True,
     )

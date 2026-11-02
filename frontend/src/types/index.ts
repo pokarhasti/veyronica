@@ -83,6 +83,7 @@ export interface RunSummary {
   store_id: string;
   status: 'running' | 'awaiting_approval' | 'completed' | 'rejected' | 'failed';
   started_at: string;
+  temporal_wf_id?: string | null;
   awaiting_since?: string;
   completed_at?: string;
   agent_prep_ms?: number;
