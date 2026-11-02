@@ -36,6 +36,16 @@ class Settings(BaseSettings):
     # ── LLM (Gemini primary, Grok fallback, Plan C template safety net) ──
     llm_provider: str = "gemini"
     gemini_api_key: str = ""
+    # Gemini 8-key failover pool (tried in order if one dies/quota exhausted)
+    gemini_api_key_1: str = ""
+    gemini_api_key_2: str = ""
+    gemini_api_key_3: str = ""
+    gemini_api_key_4: str = ""
+    gemini_api_key_5: str = ""
+    gemini_api_key_6: str = ""
+    gemini_api_key_7: str = ""
+    gemini_api_key_8: str = ""
+    gemini_api_keys: str = ""  # Optional comma-separated list of keys
     gemini_model: str = "gemini-3.8-flash"  # Options: gemini-3.8-flash, gemini-3.6-flash, gemini-3.5-flash-lite, gemma-4
 
     # Grok (xAI) Fallback
@@ -51,6 +61,33 @@ class Settings(BaseSettings):
     llm_retry_count: int = 2
     llm_fallback_api_key: str = ""
     llm_fallback_model: str = "grok-2-latest"
+
+    @property
+    def all_gemini_api_keys(self) -> list[str]:
+        """Collect all configured Gemini API keys (1-8+), removing blanks and duplicates."""
+        keys: list[str] = []
+        candidates = [
+            self.gemini_api_key_1,
+            self.gemini_api_key_2,
+            self.gemini_api_key_3,
+            self.gemini_api_key_4,
+            self.gemini_api_key_5,
+            self.gemini_api_key_6,
+            self.gemini_api_key_7,
+            self.gemini_api_key_8,
+            self.gemini_api_key,
+            self.llm_api_key,
+        ]
+        for k in candidates:
+            val = (k or "").strip()
+            if val and val not in keys:
+                keys.append(val)
+        if self.gemini_api_keys:
+            for part in self.gemini_api_keys.split(","):
+                val = part.strip()
+                if val and val not in keys:
+                    keys.append(val)
+        return keys
 
     # ── Policy thresholds (Section 4, single source of truth) ──
     auto_approve_limit: Decimal = Decimal("10000")

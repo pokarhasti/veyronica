@@ -38,24 +38,27 @@ class LLMClient:
     ) -> tuple[str, str]:
         """
         Generate rationale explaining the replenishment order.
+        Iterates through up to 8 Gemini API keys in sequence.
+        If a key dies (quota, network, 429), it automatically falls over to the next key.
+        Falls back to Grok if all Gemini keys fail, then to Plan C template.
         Returns: (rationale_text, source: 'ai_generated' | 'template')
         """
-        gemini_key = self.settings.gemini_api_key or self.settings.llm_api_key
+        gemini_keys = self.settings.all_gemini_api_keys
         grok_key = self.settings.grok_api_key or self.settings.llm_fallback_api_key
 
-        # 1. Primary: Google Gemini
-        if gemini_key:
+        # 1. Primary: Google Gemini pool (keys 1-8 failover)
+        for idx, key in enumerate(gemini_keys, start=1):
             try:
                 text = await self._call_gemini_for_rationale(
                     store_id=store_id,
                     lines=lines,
                     target_cover_days=target_cover_days,
-                    api_key=gemini_key,
+                    api_key=key,
                 )
                 if text and len(text.strip()) > 10:
                     return text.strip(), "ai_generated"
             except Exception as e:
-                logger.warning("Gemini rationale generation failed: %s", e)
+                logger.warning("Gemini API key #%d failed (%s); trying next available key...", idx, e)
 
         # 2. Fallback: xAI Grok
         if grok_key:
@@ -83,25 +86,28 @@ class LLMClient:
     ) -> tuple[str, str]:
         """
         Generate supplier notification email body.
+        Iterates through up to 8 Gemini API keys in sequence.
+        If a key dies (quota, network, 429), it automatically falls over to the next key.
+        Falls back to Grok if all Gemini keys fail, then to Plan C template.
         Returns: (email_body, source: 'ai_generated' | 'template')
         """
-        gemini_key = self.settings.gemini_api_key or self.settings.llm_api_key
+        gemini_keys = self.settings.all_gemini_api_keys
         grok_key = self.settings.grok_api_key or self.settings.llm_fallback_api_key
 
-        # 1. Primary: Google Gemini
-        if gemini_key:
+        # 1. Primary: Google Gemini pool (keys 1-8 failover)
+        for idx, key in enumerate(gemini_keys, start=1):
             try:
                 text = await self._call_gemini_for_email(
                     supplier_name=supplier_name,
                     store_id=store_id,
                     lines=lines,
                     total_value=total_value,
-                    api_key=gemini_key,
+                    api_key=key,
                 )
                 if text and len(text.strip()) > 10:
                     return text.strip(), "ai_generated"
             except Exception as e:
-                logger.warning("Gemini email generation failed: %s", e)
+                logger.warning("Gemini API key #%d failed (%s); trying next available key...", idx, e)
 
         # 2. Fallback: xAI Grok
         if grok_key:

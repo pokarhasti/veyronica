@@ -64,3 +64,45 @@ def test_gemini_model_resolution(monkeypatch):
         client.settings.gemini_model = input_model
         assert client._resolve_gemini_model() == expected_resolved
 
+
+def test_gemini_eight_key_pool():
+    from app.config import Settings
+    s = Settings(
+        gemini_api_key_1="key_1",
+        gemini_api_key_2="key_2",
+        gemini_api_key_3="key_3",
+        gemini_api_key_4="key_4",
+        gemini_api_key_5="key_5",
+        gemini_api_key_6="key_6",
+        gemini_api_key_7="key_7",
+        gemini_api_key_8="key_8",
+    )
+    keys = s.all_gemini_api_keys
+    assert len(keys) == 8
+    assert keys == [f"key_{i}" for i in range(1, 9)]
+
+
+@pytest.mark.asyncio
+async def test_gemini_multi_key_failover(monkeypatch):
+    client = LLMClient()
+    client.settings.gemini_api_key_1 = "bad_key_1"
+    client.settings.gemini_api_key_2 = "good_key_2"
+
+    attempted_keys = []
+
+    async def mock_call(store_id, lines, target_cover_days, api_key):
+        attempted_keys.append(api_key)
+        if api_key == "bad_key_1":
+            raise RuntimeError("API quota exhausted / key dead (429)")
+        return "Store STORE-214 replenished successfully."
+
+    monkeypatch.setattr(client, "_call_gemini_for_rationale", mock_call)
+
+    lines = [{"sku": "SKU-8821", "sku_name": "Men's Slim Jeans", "qty": 60}]
+    rationale, source = await client.generate_rationale("STORE-214", lines, target_cover_days=14)
+
+    assert source == "ai_generated"
+    assert "Store STORE-214 replenished successfully." in rationale
+    assert attempted_keys == ["bad_key_1", "good_key_2"]
+
+
