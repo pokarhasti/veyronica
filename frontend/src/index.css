@@ -3,26 +3,74 @@
 @tailwind utilities;
 
 :root {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  color-scheme: dark;
+  --ledger-ground: #FDFBF7;
+  --ledger-surface: #FFFFFF;
+  --ledger-surface-subdued: #F5F2EB;
+  --ledger-ink: #1C1917;
+  --ledger-ink-muted: #57534E;
+  --ledger-ink-faint: #78716C;
+  --ledger-hairline: #E7E5E4;
+  --ledger-hairline-dark: #D6D3D1;
+  --ledger-crimson: #991B1B;
+  --ledger-emerald: #065F46;
+  --ledger-amber: #B45309;
+
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color-scheme: light;
 }
 
-code, pre {
-  font-family: 'JetBrains Mono', monospace;
+body {
+  background-color: var(--ledger-ground);
+  color: var(--ledger-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom subtle scrollbar */
+code, pre, .font-mono {
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
+}
+
+h1, h2, h3, .font-serif {
+  font-family: 'Playfair Display', Georgia, Cambria, 'Times New Roman', serif;
+}
+
+/* Subtle CSS-only paper grain texture under 4% opacity */
+.paper-grain {
+  background-image: radial-gradient(rgba(28, 25, 23, 0.03) 1px, transparent 0);
+  background-size: 8px 8px;
+}
+
+/* Dotted leader connecting label and amount in ledger rows */
+.ledger-dotted-leader {
+  flex: 1 1 auto;
+  border-bottom: 1px dotted var(--ledger-hairline-dark);
+  margin: 0 0.5rem;
+  min-width: 1rem;
+  transform: translateY(-4px);
+}
+
+/* Subtle light archival scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: var(--ledger-ground);
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 9999px;
+  background: var(--ledger-hairline-dark);
+  border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: var(--ledger-ink-faint);
+}
+
+/* Accessibility: reduce motion when preferred */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

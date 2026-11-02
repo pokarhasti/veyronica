@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { X, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, AlertCircle, FileText, CheckCircle2 } from 'lucide-react';
+import { StampBadge } from './primitives/StampBadge';
 
 interface ModalProps {
   isOpen: boolean;
@@ -14,59 +15,91 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, onSubmit, title, 
   const minLength = 20;
   const isValid = reason.trim().length >= minLength;
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-lg w-full p-6 shadow-2xl relative text-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="bg-ledger-surface border border-ledger-hairline rounded-xs max-w-lg w-full p-6 shadow-ledger-md paper-grain relative text-ledger-ink animate-stamp-press">
+        {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg"
+          aria-label="Close rejection affidavit"
+          className="absolute top-4 right-4 text-ledger-faint hover:text-ledger-crimson p-1 rounded-xs transition-colors cursor-pointer"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
 
-        <h3 className="text-lg font-bold text-slate-100 mb-2">{title}</h3>
-        <p className="text-xs text-slate-400 mb-4">
-          Under V-Mart governance policy, rejecting a replenishment order requires an explicit, auditable reason of at least 20 characters.
-        </p>
+        {/* Folio Header */}
+        <div className="border-b border-ledger-hairline pb-3 mb-4">
+          <div className="text-[10px] font-mono uppercase tracking-widest text-ledger-crimson font-semibold mb-0.5 flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5" />
+            <span>AFFIDAVIT § REJECTION FILING DOCKET</span>
+          </div>
+          <h3 className="font-serif text-xl font-bold text-ledger-ink tracking-tight">{title}</h3>
+          <p className="text-xs text-ledger-muted mt-1 leading-relaxed font-sans">
+            Under V-Mart governance policy, rejecting a replenishment requisition requires an explicit, immutable justification of at least {minLength} characters entered into the cryptographic audit log.
+          </p>
+        </div>
 
+        {/* Input Area */}
         <div className="space-y-3">
+          <label htmlFor="rejection-reason" className="block text-[11px] font-mono uppercase tracking-wider text-ledger-muted font-semibold">
+            Fiduciary Justification Statement:
+          </label>
           <textarea
-            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 h-28 resize-none"
-            placeholder="e.g., Order quantity is too high for current shelf capacity; supplier stock lead time conflicts with weekend sale..."
+            id="rejection-reason"
+            className="w-full bg-ledger-ground border border-ledger-hairline rounded-xs p-3 text-xs font-mono text-ledger-ink placeholder:text-ledger-faint focus:outline-none focus:border-ledger-crimson focus:ring-1 focus:ring-ledger-crimson/30 h-28 resize-none leading-relaxed"
+            placeholder="e.g., Order quantity is too high for current shelf capacity; supplier stock lead time conflicts with promotional schedule..."
             value={reason}
             onChange={(e) => setReason(e.target.value)}
+            disabled={loading}
           />
 
-          <div className="flex items-center justify-between text-xs">
-            <span className={isValid ? 'text-emerald-400' : 'text-amber-400'}>
-              {reason.trim().length} / {minLength} minimum characters
+          <div className="flex items-center justify-between text-xs font-mono">
+            <span className={isValid ? 'text-emerald-800 font-semibold' : 'text-amber-800'}>
+              [ {reason.trim().length} / {minLength} MINIMUM CHARACTERS ]
             </span>
-            {!isValid && (
-              <span className="flex items-center text-amber-400/90">
+            {!isValid ? (
+              <span className="flex items-center text-amber-800 text-[11px]">
                 <AlertCircle className="w-3.5 h-3.5 mr-1" />
-                Reason too short
+                Reason requires {minLength - reason.trim().length} more characters
+              </span>
+            ) : (
+              <span className="flex items-center text-emerald-800 text-[11px] font-semibold">
+                <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                Justification Validated
               </span>
             )}
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end space-x-3">
+        {/* Action Buttons */}
+        <div className="mt-6 pt-4 border-t border-ledger-hairline flex justify-end space-x-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+            disabled={loading}
+            className="px-4 py-2 text-xs font-mono uppercase tracking-wider text-ledger-muted hover:text-ledger-ink bg-ledger-ground hover:bg-ledger-surface border border-ledger-hairline rounded-xs transition-colors cursor-pointer"
           >
-            Cancel
+            Dismiss
           </button>
           <button
             type="button"
             disabled={!isValid || loading}
             onClick={() => onSubmit(reason)}
-            className="px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed rounded-lg shadow-lg shadow-rose-950/50 transition-colors"
+            className="px-5 py-2 text-xs font-serif font-bold uppercase tracking-widest text-white bg-ledger-crimson hover:bg-[#7F1D1D] disabled:opacity-40 disabled:cursor-not-allowed rounded-xs shadow-ledger-stamp border border-ledger-crimson/80 transition-all cursor-pointer"
           >
-            {loading ? 'Submitting...' : 'Confirm Rejection'}
+            {loading ? 'Filing Rejection...' : 'Stamp Rejection Docket'}
           </button>
         </div>
       </div>

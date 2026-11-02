@@ -10,7 +10,9 @@ import {
   XCircle,
   AlertCircle,
   Activity,
+  ArrowRight,
 } from 'lucide-react';
+import { StampBadge } from './primitives/StampBadge';
 
 interface PipelineStepperProps {
   status: 'running' | 'awaiting_approval' | 'completed' | 'rejected' | 'failed';
@@ -20,6 +22,7 @@ interface PipelineStepperProps {
 
 interface StepConfig {
   id: number;
+  folio: string;
   name: string;
   agent: string;
   desc: string;
@@ -29,37 +32,42 @@ interface StepConfig {
 const STEPS: StepConfig[] = [
   {
     id: 1,
+    folio: '§ 01',
     name: 'Signal Detection',
     agent: 'SignalAgent',
-    desc: 'Scans store inventory & detects low cover (<7d)',
+    desc: 'Scans store stock cover & velocity (<7d burn-down)',
     icon: Radio,
   },
   {
     id: 2,
+    folio: '§ 02',
     name: 'Deterministic Checks',
     agent: 'ConstraintAgent',
-    desc: 'MOQ, Lead Time, Store Budget & WH-NORTH-01 DC split',
+    desc: 'MOQ bounds, lead times, OTB budget & DC allocation',
     icon: Sliders,
   },
   {
     id: 3,
+    folio: '§ 03',
     name: 'Cognitive Drafting',
     agent: 'DraftAgent',
-    desc: 'Gemini 2.5 Flash rationale & vendor email + Hallucination Guard',
+    desc: 'Gemini reasoning, vendor email & Hallucination Guard',
     icon: Sparkles,
   },
   {
     id: 4,
-    name: 'Governance Routing',
+    folio: '§ 04',
+    name: 'Governance Gate',
     agent: 'RoutingAgent',
-    desc: 'Deterministic policy tiering & Temporal HITL signal gate',
+    desc: 'Deterministic policy tiering & Temporal durable pause',
     icon: GitPullRequest,
   },
   {
     id: 5,
+    folio: '§ 05',
     name: 'Enterprise Execution',
     agent: 'ExecutionAgent',
-    desc: 'Ginesys ERP PO creation & supplier email dispatch',
+    desc: 'ERP purchase orders & vendor dispatch confirmation',
     icon: Send,
   },
 ];
@@ -94,34 +102,40 @@ export const PipelineStepper: React.FC<PipelineStepperProps> = ({
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
+    <div className="bg-ledger-surface border border-ledger-hairline rounded-xs p-5 shadow-ledger-xs paper-grain select-none">
+      {/* Top Ledger Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-3 border-b border-ledger-hairline">
         <div className="flex items-center space-x-2">
-          <Activity className="w-4 h-4 text-indigo-400" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-            Autonomous Pipeline Stepper (LangGraph Cognitive Graph + Temporal Durability)
+          <Activity className="w-4 h-4 text-ledger-crimson shrink-0" />
+          <h3 className="text-xs font-serif font-bold uppercase tracking-wider text-ledger-ink">
+            Autonomous Pipeline Stream (LangGraph Cognitive Loop + Temporal Durability)
           </h3>
         </div>
-        <div className="flex items-center space-x-3 text-[11px] font-mono text-slate-400">
+
+        <div className="flex flex-wrap items-center gap-2.5 text-[11px] font-mono">
           {agentPrepMs !== undefined && agentPrepMs > 0 && (
-            <span className="text-indigo-300 bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-800/80">
-              Prep Latency: {agentPrepMs}ms
+            <span className="text-ledger-ink bg-ledger-ground px-2.5 py-0.5 rounded-xs border border-ledger-hairline">
+              Prep Latency: <strong>{agentPrepMs}ms</strong>
+            </span>
+          )}
+          {approvalWaitMs !== undefined && approvalWaitMs > 0 && (
+            <span className="text-ledger-muted bg-ledger-ground px-2.5 py-0.5 rounded-xs border border-ledger-hairline">
+              Approval Wait: <strong>{(approvalWaitMs / 1000).toFixed(1)}s</strong>
             </span>
           )}
           {status === 'awaiting_approval' && (
-            <span className="text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800/80 animate-pulse">
-              Temporal Signal: Paused for HITL
-            </span>
+            <StampBadge label="TEMPORAL PAUSED: HITL GATE" variant="pending" size="sm" />
           )}
           {status === 'completed' && (
-            <span className="text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/80">
-              Execution Confirmed
-            </span>
+            <StampBadge label="ALL STAGES CERTIFIED" variant="certified" size="sm" />
+          )}
+          {status === 'rejected' && (
+            <StampBadge label="REJECTED AT GOVERNANCE GATE" variant="rejected" size="sm" />
           )}
         </div>
       </div>
 
-      {/* Grid of Steps */}
+      {/* Horizontal Process Ribbon with Hairline Bridges */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-3 relative">
         {STEPS.map((s, idx) => {
           const state = getStepState(s.id);
@@ -130,66 +144,83 @@ export const PipelineStepper: React.FC<PipelineStepperProps> = ({
           return (
             <div
               key={s.id}
-              className={`relative rounded-lg p-3.5 border transition-all ${
+              className={`relative rounded-xs p-3.5 border transition-all ${
                 state === 'completed'
-                  ? 'bg-slate-950/80 border-emerald-800/80 text-emerald-300 shadow-sm shadow-emerald-950/20'
+                  ? 'bg-emerald-50/50 border-emerald-800/40 text-emerald-900 shadow-ledger-xs'
                   : state === 'active'
-                  ? 'bg-amber-950/40 border-amber-500 text-amber-200 shadow-md shadow-amber-950/40 ring-1 ring-amber-500/50'
+                  ? 'bg-amber-50/70 border-amber-800/60 text-amber-950 shadow-ledger-xs ring-1 ring-amber-800/20 animate-pulse'
                   : state === 'rejected'
-                  ? 'bg-rose-950/40 border-rose-800 text-rose-300'
-                  : 'bg-slate-950/40 border-slate-800 text-slate-500'
+                  ? 'bg-rose-50/60 border-rose-900/50 text-rose-950 shadow-ledger-xs'
+                  : 'bg-ledger-ground/60 border-ledger-hairline text-ledger-faint'
               }`}
             >
+              {/* Stage Folio & State Icon */}
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-slate-400">
-                  Stage {s.id}
+                <span className="text-[10px] font-mono font-bold tracking-widest text-ledger-crimson uppercase">
+                  {s.folio}
                 </span>
-                <div>
-                  {state === 'completed' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-                  {state === 'active' && <Clock className="w-4 h-4 text-amber-400 animate-spin" />}
-                  {state === 'rejected' && <XCircle className="w-4 h-4 text-rose-400" />}
-                  {state === 'pending' && <span className="w-2 h-2 rounded-full bg-slate-700 block" />}
+
+                <div className="shrink-0">
+                  {state === 'completed' && (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-800" />
+                  )}
+                  {state === 'active' && (
+                    <Clock className="w-4 h-4 text-amber-800 animate-spin" />
+                  )}
+                  {state === 'rejected' && (
+                    <XCircle className="w-4 h-4 text-ledger-crimson" />
+                  )}
+                  {state === 'pending' && (
+                    <span className="w-2 h-2 rounded-full bg-stone-300 block" />
+                  )}
                 </div>
               </div>
 
+              {/* Stage Identity */}
               <div className="flex items-center space-x-2 mb-1">
                 <div
-                  className={`p-1.5 rounded-md ${
+                  className={`w-6 h-6 rounded-xs border flex items-center justify-center shrink-0 ${
                     state === 'completed'
-                      ? 'bg-emerald-950 text-emerald-400'
+                      ? 'bg-white border-emerald-800/30 text-emerald-900'
                       : state === 'active'
-                      ? 'bg-amber-950 text-amber-300'
+                      ? 'bg-white border-amber-800/40 text-amber-900'
                       : state === 'rejected'
-                      ? 'bg-rose-950 text-rose-400'
-                      : 'bg-slate-900 text-slate-600'
+                      ? 'bg-white border-rose-900/30 text-ledger-crimson'
+                      : 'bg-white border-ledger-hairline text-ledger-faint'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-3.5 h-3.5" />
                 </div>
-                <div className="font-semibold text-xs text-slate-200 truncate">{s.name}</div>
+                <div className="font-serif font-bold text-xs text-ledger-ink truncate">
+                  {s.name}
+                </div>
               </div>
 
-              <div className="text-[11px] font-mono text-indigo-400/90 font-medium">
+              {/* Agent Attribution */}
+              <div className="text-[10px] font-mono text-ledger-crimson/90 font-semibold mb-1">
                 {s.agent}
               </div>
 
-              <p className="text-[10px] text-slate-400 mt-1.5 leading-snug">
+              {/* Description */}
+              <p className="text-[10px] text-ledger-muted leading-tight font-sans">
                 {s.desc}
               </p>
 
-              {/* Status footer pill */}
-              <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
-                <span className="capitalize font-mono">
+              {/* Bottom Process Status */}
+              <div className="mt-3 pt-2 border-t border-ledger-hairline/60 flex items-center justify-between text-[9px] font-mono uppercase tracking-wider">
+                <span className="font-semibold">
                   {state === 'completed'
-                    ? 'Completed'
+                    ? '[ CERTIFIED ]'
                     : state === 'active'
-                    ? 'Active'
+                    ? '[ EVALUATING ]'
                     : state === 'rejected'
-                    ? 'Rejected'
-                    : 'Pending'}
+                    ? '[ DOCKET VOID ]'
+                    : '[ PENDING ]'}
                 </span>
                 {idx < STEPS.length - 1 && (
-                  <span className="text-slate-600 hidden md:inline">→</span>
+                  <span className="text-ledger-hairline-dark hidden md:inline font-sans text-xs">
+                    →
+                  </span>
                 )}
               </div>
             </div>

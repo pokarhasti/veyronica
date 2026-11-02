@@ -1,28 +1,50 @@
 import React from 'react';
+import { StampBadge } from './primitives/StampBadge';
 
 interface RiskBadgeProps {
-  riskClass: 'low' | 'medium' | 'high';
+  riskClass: 'low' | 'medium' | 'high' | string;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
 }
 
-export const RiskBadge: React.FC<RiskBadgeProps> = ({ riskClass }) => {
-  const styles = {
-    low: 'bg-emerald-950/80 text-emerald-400 border-emerald-800/60',
-    medium: 'bg-amber-950/80 text-amber-400 border-amber-800/60',
-    high: 'bg-rose-950/80 text-rose-400 border-rose-800/60',
-  };
+export const RiskBadge: React.FC<RiskBadgeProps> = ({
+  riskClass,
+  size = 'md',
+  className = '',
+}) => {
+  const normalized = riskClass.toLowerCase();
 
-  const labels = {
-    low: 'LOW RISK',
-    medium: 'MEDIUM RISK',
-    high: 'HIGH RISK',
-  };
+  if (normalized === 'low') {
+    return (
+      <StampBadge
+        label="LOW RISK"
+        prefix="CERTIFIED •"
+        variant="certified"
+        size={size}
+        className={className}
+      />
+    );
+  }
+
+  if (normalized === 'medium') {
+    return (
+      <StampBadge
+        label="MEDIUM RISK"
+        prefix="CAUTION •"
+        variant="pending"
+        size={size}
+        className={className}
+      />
+    );
+  }
 
   return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide border ${styles[riskClass]}`}
-    >
-      <span className="w-1.5 h-1.5 rounded-full mr-1.5 bg-current animate-pulse" />
-      {labels[riskClass]}
-    </span>
+    <StampBadge
+      label="HIGH RISK"
+      prefix="STRICT GATE •"
+      variant="rejected"
+      size={size}
+      className={className}
+    />
   );
 };

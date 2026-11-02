@@ -7,14 +7,22 @@ import {
   AlertCircle,
   ArrowRight,
   CheckCircle2,
-  Clock,
   Sliders,
   RotateCcw,
-  TrendingUp,
-  ShieldAlert,
   ChevronDown,
   ChevronUp,
+  Scale,
+  ShieldCheck,
+  Layers,
 } from 'lucide-react';
+import {
+  StampBadge,
+  HairlineRule,
+  LedgerRow,
+  SectionHeading,
+  LedgerEmptyState,
+} from '../components/primitives';
+import { PrimitivesShowcase } from '../components/primitives/PrimitivesShowcase';
 
 interface HomePageProps {
   onNavigateToRun: (runId: string) => void;
@@ -27,8 +35,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
   const [error, setError] = useState<string | null>(null);
   const [recentRuns, setRecentRuns] = useState<RunSummary[]>([]);
 
-  // Enhancement 4.1: Live "What-If" Store & Budget Sandbox State
+  // Interactive Balance Sheet Simulator State
   const [sandboxOpen, setSandboxOpen] = useState(false);
+  const [showPrimitivesShowcase, setShowPrimitivesShowcase] = useState(false);
   const [storeState, setStoreState] = useState<{
     monthly_budget: number;
     budget_spent: number;
@@ -82,7 +91,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
       setStoreState((prev) => ({ ...prev, budget_spent: newSpent }));
       const headroom = storeState.monthly_budget - newSpent;
       const pct = Math.round((headroom / storeState.monthly_budget) * 100);
-      setSandboxFeedback(`Store budget updated to ₹${newSpent.toLocaleString('en-IN')} (Remaining Headroom: ₹${headroom.toLocaleString('en-IN')} / ${pct}%)`);
+      setSandboxFeedback(
+        `Balance sheet updated: ₹${newSpent.toLocaleString('en-IN')} allocated (Remaining OTB: ₹${headroom.toLocaleString('en-IN')} • ${pct}%)`
+      );
       setTimeout(() => setSandboxFeedback(null), 4000);
     } catch (err: any) {
       alert(`Simulation error: ${err.message}`);
@@ -97,7 +108,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
       await api.resetDemo();
       await fetchStoreData(selectedStore);
       fetchRecentRuns();
-      setSandboxFeedback('Database reset to original seed state.');
+      setSandboxFeedback('Ledger restored to certified seed state.');
       setTimeout(() => setSandboxFeedback(null), 3000);
     } catch (err: any) {
       alert(`Reset error: ${err.message}`);
@@ -108,22 +119,22 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
 
   const storeScenarios: Record<string, { title: string; desc: string; expected: string; tag: string }> = {
     'STORE-214': {
-      title: 'Hero Scenario — V-Mart Lucknow Gomtinagar (Store Manager Approval)',
-      desc: 'Stock cover drops to 4 days across 3 core denim/apparel SKUs. Generates a ₹42,000 order to SUP-1042 utilizing 70% of remaining budget headroom.',
-      expected: 'Routes to Store Manager (Rule 4) with Budget Headroom FLAG.',
-      tag: 'Hero Demo',
+      title: 'Hero Scenario — V-Mart Lucknow Gomtinagar (Store Manager Approval Gate)',
+      desc: 'Stock cover drops below 5 days across 3 core apparel SKUs. Generates a ₹42,000 replenishment order to SUP-1042 utilizing 70% of available budget headroom.',
+      expected: 'Routes to Store Manager under Rule 4 with Budget Headroom FLAG.',
+      tag: 'HERO SCENARIO',
     },
     'STORE-087': {
-      title: 'Small Replenishment — V-Mart Jaipur Vaishali (Auto-Approve Path)',
-      desc: 'Small restock under ₹10,000 from fully approved supplier with all checks passing.',
-      expected: 'Auto-approves without manual intervention (Rule 6).',
-      tag: 'Auto-Approve',
+      title: 'Small Replenishment — V-Mart Jaipur Vaishali (Auto-Approve Threshold)',
+      desc: 'Low-value restock below ₹10,000 with pre-approved supplier credentialing and zero flag exceptions.',
+      expected: 'Auto-approves instantaneously without human signature (Rule 6).',
+      tag: 'AUTO-APPROVE',
     },
     'STORE-312': {
-      title: 'High-Value Escalation — V-Mart Patna Boring Road (Regional Manager)',
-      desc: 'Store budget spent is near monthly cap (₹70,000 / ₹80,000). Reorder causes budget headroom failure or exceeds store limit.',
-      expected: 'Escalates to Regional Procurement Manager (Rule 1 / Rule 3).',
-      tag: 'Escalation',
+      title: 'High-Value Escalation — V-Mart Patna Boring Road (Regional Manager Escalation)',
+      desc: 'Store budget spent is near monthly threshold cap (₹70,000 / ₹80,000). Reorder causes budget headroom breach.',
+      expected: 'Escalates to Regional Procurement Manager under Fiduciary Rule 1 & Rule 3.',
+      tag: 'ESCALATION',
     },
   };
 
@@ -132,121 +143,143 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
   const budgetSpentPct = Math.min(100, Math.round((storeState.budget_spent / storeState.monthly_budget) * 100));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Hero Header */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/40 border border-slate-800 rounded-2xl p-8 relative overflow-hidden shadow-2xl">
-        <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center space-x-2 text-xs font-semibold px-3 py-1 rounded-full bg-indigo-950/80 text-indigo-300 border border-indigo-800/60 mb-4">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Deterministic Separation • Durable Approval Gate</span>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 bg-ledger-ground text-ledger-ink paper-grain">
+      {/* Editorial Masthead Hero Banner */}
+      <div className="border border-ledger-hairline bg-ledger-surface p-8 sm:p-10 rounded-xs shadow-ledger-xs relative">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-ledger-hairline pb-4 mb-6">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-ledger-crimson inline-block" />
+            <span className="text-[11px] font-mono tracking-widest text-ledger-crimson uppercase font-semibold">
+              OFFICIAL DISPATCH FOLIO § 214
+            </span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <div className="flex items-center gap-3 text-xs font-mono text-ledger-muted">
+            <span className="flex items-center gap-1 text-emerald-800">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>CRYPTOGRAPHIC PROTOCOL ACTIVE</span>
+            </span>
+            <span className="text-ledger-hairline-dark">•</span>
+            <span>EDITION: NOV 2026</span>
+          </div>
+        </div>
+
+        <div className="max-w-3xl">
+          <h1 className="font-serif text-3xl sm:text-4xl font-bold tracking-tight text-ledger-ink leading-tight">
             V-Mart Autonomous Replenishment Desk
           </h1>
 
-          <p className="mt-3 text-slate-300 text-sm sm:text-base leading-relaxed">
-            Multi-agent replenishment intelligence powered by <strong>LangGraph</strong> cognitive graphs and{' '}
-            <strong>Temporal</strong> durable workflow primitives. Rigorously enforces store OTB budgets, supplier MOQs,
-            lead time constraints, and human authorization before ERP write.
+          <p className="mt-3 text-ledger-muted text-sm sm:text-base leading-relaxed font-sans">
+            Governed autonomous replenishment intelligence orchestrating inventory velocity, supplier MOQ
+            constraints, and open-to-buy financial thresholds through <strong>LangGraph</strong> cognitive graphs and{' '}
+            <strong>Temporal</strong> durable state machines. Every decision produces an immutable SHA-256 cryptographic audit record.
           </p>
 
-          {/* Trigger Selector */}
-          <div className="mt-8 flex flex-wrap items-center gap-4">
-            <div className="bg-slate-950/80 border border-slate-700/80 rounded-xl p-1.5 flex items-center shadow-inner">
-              <span className="text-xs text-slate-400 font-semibold px-3 uppercase tracking-wider">
-                Store:
+          {/* Trigger Dispatch Console */}
+          <div className="mt-8 pt-6 border-t border-ledger-hairline flex flex-wrap items-center gap-4">
+            <div className="flex items-center border border-ledger-hairline bg-ledger-ground rounded-xs px-3 py-1.5 shadow-inner">
+              <span className="text-[11px] font-mono uppercase tracking-widest text-ledger-muted mr-2 font-semibold select-none">
+                SELECT STORE:
               </span>
               <select
                 aria-label="Select store to replenish"
-                className="bg-transparent text-slate-100 text-sm font-semibold pr-8 py-1.5 focus:outline-none cursor-pointer"
+                className="bg-transparent text-ledger-ink text-xs font-mono font-semibold focus:outline-none cursor-pointer pr-4"
                 value={selectedStore}
                 onChange={(e) => setSelectedStore(e.target.value)}
               >
-                <option value="STORE-214" className="bg-slate-900 text-slate-100">
-                  STORE-214 (Lucknow Gomtinagar)
-                </option>
-                <option value="STORE-087" className="bg-slate-900 text-slate-100">
-                  STORE-087 (Jaipur Vaishali)
-                </option>
-                <option value="STORE-312" className="bg-slate-900 text-slate-100">
-                  STORE-312 (Patna Boring Road)
-                </option>
+                <option value="STORE-214">STORE-214 (Lucknow Gomtinagar)</option>
+                <option value="STORE-087">STORE-087 (Jaipur Vaishali)</option>
+                <option value="STORE-312">STORE-312 (Patna Boring Road)</option>
               </select>
             </div>
 
             <button
               onClick={handleTrigger}
               disabled={loading}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm px-6 py-3 rounded-xl shadow-lg shadow-indigo-950/60 flex items-center space-x-2 transition-all disabled:opacity-50"
+              className="bg-ledger-crimson hover:bg-[#7F1D1D] active:scale-[0.99] text-white font-serif font-bold text-xs uppercase tracking-widest px-6 py-2.5 rounded-xs shadow-ledger-stamp flex items-center space-x-2 transition-all disabled:opacity-50 border border-ledger-crimson/80 cursor-pointer"
             >
-              <Play className="w-4 h-4 fill-white" />
-              <span>{loading ? 'Evaluating Agents...' : 'Run Replenishment Check'}</span>
+              <Play className="w-3.5 h-3.5 fill-white" />
+              <span>{loading ? 'Evaluating Cognitive Loop...' : 'Dispatch Replenishment Run'}</span>
+            </button>
+
+            <button
+              onClick={() => setShowPrimitivesShowcase(!showPrimitivesShowcase)}
+              className="text-xs font-mono text-ledger-muted hover:text-ledger-crimson border border-ledger-hairline bg-ledger-ground hover:bg-ledger-surface px-3 py-1.5 rounded-xs transition-colors flex items-center gap-1.5"
+            >
+              <Layers className="w-3.5 h-3.5 text-ledger-crimson" />
+              <span>{showPrimitivesShowcase ? 'Hide Design Primitives' : 'Inspect Primitives Spec (DS-02)'}</span>
             </button>
           </div>
 
           {error && (
-            <div className="mt-4 p-3 rounded-lg bg-rose-950/80 border border-rose-800 text-rose-300 text-xs flex items-center">
-              <AlertCircle className="w-4 h-4 mr-2 shrink-0" />
-              <span>{error}</span>
+            <div className="mt-4 p-3 rounded-xs bg-rose-50 border border-rose-300 text-rose-900 text-xs flex items-center">
+              <AlertCircle className="w-4 h-4 mr-2 shrink-0 text-rose-700" />
+              <span className="font-mono">{error}</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Enhancement 4.1: Interactive "What-If" Store & Budget Sandbox */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+      {/* Embedded Primitives Showcase Drawer (When toggled) */}
+      {showPrimitivesShowcase && (
+        <div className="border border-ledger-crimson/30 bg-ledger-surface p-6 rounded-xs shadow-ledger-sm animate-fade-in-up">
+          <PrimitivesShowcase />
+        </div>
+      )}
+
+      {/* Balance Sheet Simulator (What-If Sandbox) */}
+      <div className="border border-ledger-hairline bg-ledger-surface rounded-xs shadow-ledger-xs overflow-hidden">
         <div
-          className="p-4 bg-slate-950/70 border-b border-slate-800/80 flex items-center justify-between cursor-pointer select-none"
+          className="p-4 sm:p-5 bg-ledger-subdued/40 border-b border-ledger-hairline flex items-center justify-between cursor-pointer select-none hover:bg-ledger-subdued/70 transition-colors"
           onClick={() => setSandboxOpen(!sandboxOpen)}
         >
-          <div className="flex items-center space-x-2.5">
-            <div className="p-1.5 rounded-md bg-amber-950/60 border border-amber-800 text-amber-400">
-              <Sliders className="w-4 h-4" />
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-xs bg-ledger-surface border border-ledger-hairline flex items-center justify-center text-ledger-crimson shadow-ledger-xs">
+              <Scale className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-sm font-bold text-slate-200">
-                  Interactive "What-If" ERP & Budget Sandbox
+                <span className="font-serif font-bold text-base text-ledger-ink">
+                  Balance Sheet & Open-To-Buy (OTB) Simulator
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">
-                  Live DB Tuning
-                </span>
+                <StampBadge label="LIVE DB TUNING" variant="neutral" size="sm" />
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Simulate store budget spikes or inventory deficits in real-time to test policy tier escalations.
+              <p className="text-xs text-ledger-muted mt-0.5 font-sans">
+                Simulate store budget spikes or inventory deficits in real time to test deterministic policy tier routing.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
             <div className="text-right text-xs font-mono hidden sm:block">
-              <span className="text-slate-400">Remaining OTB: </span>
-              <strong className="text-emerald-400">₹{remainingHeadroom.toLocaleString('en-IN')}</strong>
+              <span className="text-ledger-muted">Remaining OTB Headroom: </span>
+              <strong className="text-emerald-900 font-bold font-mono">
+                ₹ {remainingHeadroom.toLocaleString('en-IN')}
+              </strong>
             </div>
-            <button className="text-slate-400 hover:text-white p-1">
+            <button className="text-ledger-muted hover:text-ledger-ink p-1">
               {sandboxOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
           </div>
         </div>
 
         {sandboxOpen && (
-          <div className="p-6 space-y-6 bg-slate-900/60">
+          <div className="p-6 space-y-6 bg-ledger-surface">
             {sandboxFeedback && (
-              <div className="p-3 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-xs flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+              <div className="p-3 rounded-xs bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-center space-x-2 font-mono">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-700" />
                 <span>{sandboxFeedback}</span>
               </div>
             )}
 
-            {/* Live Slider for Monthly Budget Spent */}
-            <div className="space-y-2">
+            {/* Tactile Ledger Sliders */}
+            <div className="space-y-3 bg-ledger-ground/60 p-5 border border-ledger-hairline rounded-xs">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-300 font-semibold">
-                  Store Monthly Budget Spent ({selectedStore}):
+                <span className="text-ledger-ink font-semibold font-serif">
+                  Store Monthly Budget Allocation ({selectedStore}):
                 </span>
-                <span className="font-mono text-amber-400 font-bold">
-                  ₹{storeState.budget_spent.toLocaleString('en-IN')} / ₹{storeState.monthly_budget.toLocaleString('en-IN')} ({budgetSpentPct}%)
+                <span className="font-mono text-ledger-crimson font-bold text-sm">
+                  ₹ {storeState.budget_spent.toLocaleString('en-IN')} / ₹ {storeState.monthly_budget.toLocaleString('en-IN')} ({budgetSpentPct}% Spent)
                 </span>
               </div>
 
@@ -258,31 +291,50 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
                 value={storeState.budget_spent}
                 onChange={(e) => handleSimulateBudget(Number(e.target.value))}
                 disabled={updatingSandbox}
-                className="w-full accent-indigo-500 bg-slate-950 h-2 rounded-lg cursor-pointer"
+                className="w-full accent-[#991B1B] bg-stone-300 h-1.5 rounded-none cursor-pointer"
               />
 
-              <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+              <div className="flex justify-between text-[10px] text-ledger-faint font-mono">
                 <span>₹0 (100% Headroom)</span>
-                <span>₹{(storeState.monthly_budget / 2).toLocaleString('en-IN')} (50%)</span>
-                <span>₹{storeState.monthly_budget.toLocaleString('en-IN')} (Cap Exceeded)</span>
+                <span>₹ {(storeState.monthly_budget / 2).toLocaleString('en-IN')} (50% Midway)</span>
+                <span>₹ {storeState.monthly_budget.toLocaleString('en-IN')} (Cap Exceeded)</span>
+              </div>
+
+              <div className="pt-3 border-t border-ledger-hairline space-y-1">
+                <LedgerRow
+                  label="Total Store Monthly Cap"
+                  value={`₹ ${storeState.monthly_budget.toLocaleString('en-IN')}`}
+                />
+                <LedgerRow
+                  label="Simulated Budget Utilized"
+                  value={`₹ ${storeState.budget_spent.toLocaleString('en-IN')}`}
+                  highlight
+                />
+                <LedgerRow
+                  label="Available Fiduciary Headroom"
+                  value={`₹ ${remainingHeadroom.toLocaleString('en-IN')}`}
+                  subvalue={`${100 - budgetSpentPct}% Remainder`}
+                />
               </div>
             </div>
 
-            {/* Quick Test Preset Buttons */}
-            <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+            {/* Quick Test Presets */}
+            <div className="pt-2 border-t border-ledger-hairline flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-slate-400 font-semibold mr-1">Quick Presets:</span>
+                <span className="text-xs font-mono uppercase tracking-wider text-ledger-muted mr-1 font-semibold">
+                  Presets:
+                </span>
                 <button
                   onClick={() => handleSimulateBudget(Math.round(storeState.monthly_budget * 0.92))}
                   disabled={updatingSandbox}
-                  className="px-3 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-950 border border-rose-800/80 text-rose-300 text-xs font-semibold transition-colors"
+                  className="px-3 py-1 rounded-xs bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-900 text-xs font-mono font-medium transition-colors"
                 >
-                  ⚡ Force Budget Headroom Violation (92% Spent)
+                  ⚡ Force Headroom Violation (92% Spent)
                 </button>
                 <button
                   onClick={() => handleSimulateBudget(Math.round(storeState.monthly_budget * 0.3))}
                   disabled={updatingSandbox}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-950 border border-emerald-800/80 text-emerald-300 text-xs font-semibold transition-colors"
+                  className="px-3 py-1 rounded-xs bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-mono font-medium transition-colors"
                 >
                   ✨ Healthy Headroom (30% Spent)
                 </button>
@@ -291,7 +343,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
               <button
                 onClick={handleResetSandbox}
                 disabled={updatingSandbox}
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-colors"
+                className="flex items-center space-x-1.5 px-3 py-1 rounded-xs bg-ledger-ground hover:bg-ledger-subdued border border-ledger-hairline text-ledger-ink text-xs font-mono transition-colors"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Reset Seed</span>
@@ -301,90 +353,102 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRun, onNavigateT
         )}
       </div>
 
-      {/* Selected Scenario Preview */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs uppercase tracking-wider font-bold text-slate-400">
-            Scenario Preview
+      {/* Selected Scenario Preview Docket */}
+      <div className="border border-ledger-hairline bg-ledger-surface p-6 rounded-xs shadow-ledger-xs">
+        <div className="flex items-center justify-between mb-2 border-b border-ledger-hairline pb-2">
+          <span className="text-[11px] font-mono uppercase tracking-widest text-ledger-crimson font-semibold">
+            FOLIO § SCENARIO AUDIT SPECIFICATION
           </span>
-          <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-indigo-950 text-indigo-300 border border-indigo-800">
-            {currentScenario.tag}
-          </span>
+          <StampBadge label={currentScenario.tag} variant="neutral" size="sm" />
         </div>
-        <h3 className="text-lg font-bold text-slate-100">{currentScenario.title}</h3>
-        <p className="text-sm text-slate-300 mt-1">{currentScenario.desc}</p>
-        <div className="mt-3 inline-flex items-center text-xs font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-900/60 px-3 py-1 rounded">
-          <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-          <span>Expected Outcome: {currentScenario.expected}</span>
+
+        <h3 className="font-serif text-xl font-bold text-ledger-ink mt-2">
+          {currentScenario.title}
+        </h3>
+        <p className="text-xs sm:text-sm text-ledger-muted mt-1 leading-relaxed font-sans">
+          {currentScenario.desc}
+        </p>
+
+        <div className="mt-4 inline-flex items-center text-xs font-mono text-emerald-900 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xs">
+          <CheckCircle2 className="w-3.5 h-3.5 mr-2 text-emerald-800 shrink-0" />
+          <span>Fiduciary Policy Path: <strong>{currentScenario.expected}</strong></span>
         </div>
       </div>
 
-      {/* Recent Runs */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-bold text-slate-200">Recent Replenishment Runs</h3>
-          <button
-            onClick={() => onNavigateToRun('')}
-            className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center"
-          >
-            <span>View All Runs</span>
-            <ArrowRight className="w-3.5 h-3.5 ml-1" />
-          </button>
-        </div>
+      {/* Recent Dispatches Ledger Table */}
+      <div className="border border-ledger-hairline bg-ledger-surface p-6 rounded-xs shadow-ledger-xs">
+        <SectionHeading
+          folio="FOLIO § 03"
+          title="Recent Replenishment Dispatches"
+          subtitle="Chronological audit records of autonomous agentic workflow executions."
+          action={
+            <button
+              onClick={() => onNavigateToRun('')}
+              className="text-xs font-mono font-semibold text-ledger-crimson hover:underline flex items-center"
+            >
+              <span>View Full Ledger Archive</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </button>
+          }
+        />
 
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
-          {recentRuns.length === 0 ? (
-            <div className="p-8 text-center text-slate-500 text-sm">
-              No workflow runs recorded yet. Click "Run Replenishment Check" above to trigger a live run.
-            </div>
-          ) : (
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950/70 text-slate-400 border-b border-slate-800">
-                <tr>
-                  <th className="p-3">Run ID</th>
-                  <th className="p-3">Store</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3">Started</th>
-                  <th className="p-3 text-right">Action</th>
+        {recentRuns.length === 0 ? (
+          <LedgerEmptyState
+            folio="LEDGER-DISPATCH"
+            title="No Recent Dispatches Recorded"
+            description="The transaction ledger is pristine. Click 'Dispatch Replenishment Run' above to launch an autonomous replenishment evaluation."
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-ledger-hairline text-ledger-muted font-mono uppercase text-[10px] tracking-wider bg-ledger-subdued/40">
+                  <th className="py-2.5 px-3 font-semibold">Block Run ID</th>
+                  <th className="py-2.5 px-3 font-semibold">Store Target</th>
+                  <th className="py-2.5 px-3 font-semibold">Workflow Status</th>
+                  <th className="py-2.5 px-3 font-semibold">Timestamp</th>
+                  <th className="py-2.5 px-3 font-semibold text-right">Filing Docket</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-ledger-hairline font-sans">
                 {recentRuns.slice(0, 5).map((r) => (
-                  <tr key={r.run_id} className="hover:bg-slate-800/40">
-                    <td className="p-3 font-mono text-indigo-300">{r.run_id.slice(0, 8)}...</td>
-                    <td className="p-3 font-medium text-slate-200">{r.store_id}</td>
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                  <tr key={r.run_id} className="hover:bg-ledger-subdued/30 transition-colors">
+                    <td className="py-3 px-3 font-mono font-medium text-ledger-ink">
+                      {r.run_id.slice(0, 8)}…
+                    </td>
+                    <td className="py-3 px-3 font-semibold text-ledger-ink">{r.store_id}</td>
+                    <td className="py-3 px-3">
+                      <StampBadge
+                        label={r.status.replace('_', ' ')}
+                        variant={
                           r.status === 'completed'
-                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                            ? 'certified'
                             : r.status === 'awaiting_approval'
-                            ? 'bg-amber-950 text-amber-300 border border-amber-800 animate-pulse'
+                            ? 'pending'
                             : r.status === 'rejected'
-                            ? 'bg-rose-950 text-rose-300 border border-rose-800'
-                            : 'bg-slate-800 text-slate-300'
-                        }`}
-                      >
-                        {r.status.replace('_', ' ')}
-                      </span>
+                            ? 'rejected'
+                            : 'neutral'
+                        }
+                        size="sm"
+                      />
                     </td>
-                    <td className="p-3 text-slate-400 font-mono">
-                      {new Date(r.started_at).toLocaleTimeString()}
+                    <td className="py-3 px-3 text-ledger-muted font-mono text-[11px]">
+                      {new Date(r.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="py-3 px-3 text-right">
                       <button
                         onClick={() => onNavigateToRun(r.run_id)}
-                        className="text-indigo-400 hover:text-indigo-300 font-semibold"
+                        className="text-ledger-crimson hover:underline font-mono text-xs font-semibold"
                       >
-                        Inspect →
+                        Inspect Docket →
                       </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { CheckResult } from '../types';
-import { CheckCircle2, AlertTriangle, XCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, ChevronDown, ChevronRight, FileCode } from 'lucide-react';
+import { StampBadge } from './primitives/StampBadge';
+import { LedgerRow } from './primitives/LedgerRow';
 
 interface CheckRowProps {
   check: CheckResult;
@@ -12,79 +14,115 @@ export const CheckRow: React.FC<CheckRowProps> = ({ check }) => {
   const getStatusIcon = (status: 'PASS' | 'FLAG' | 'FAIL') => {
     switch (status) {
       case 'PASS':
-        return <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />;
+        return <CheckCircle2 className="w-4 h-4 text-emerald-800 shrink-0" />;
       case 'FLAG':
-        return <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />;
+        return <AlertTriangle className="w-4 h-4 text-amber-800 shrink-0" />;
       case 'FAIL':
-        return <XCircle className="w-5 h-5 text-rose-400 shrink-0" />;
+        return <XCircle className="w-4 h-4 text-ledger-crimson shrink-0" />;
     }
   };
 
   const getStatusBadge = (status: 'PASS' | 'FLAG' | 'FAIL') => {
     switch (status) {
       case 'PASS':
-        return <span className="text-xs px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">PASS</span>;
+        return <StampBadge label="CERTIFIED PASS" variant="certified" size="sm" />;
       case 'FLAG':
-        return <span className="text-xs px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-semibold">FLAG</span>;
+        return <StampBadge label="AUDIT FLAG" variant="pending" size="sm" />;
       case 'FAIL':
-        return <span className="text-xs px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-bold">FAIL</span>;
+        return <StampBadge label="BREACH FAIL" variant="rejected" size="sm" />;
     }
   };
 
   const formatName = (name: string) => {
     switch (name) {
       case 'moq':
-        return 'MOQ Check';
+        return 'Minimum Order Quantity (MOQ) Constraint';
       case 'lead_time':
-        return 'Lead Time & Stockout Gap';
+        return 'Lead Time & Stockout Gap Loss Evaluation';
       case 'budget_headroom':
-        return 'Store Budget Headroom';
+        return 'Open-To-Buy (OTB) Store Budget Headroom';
       case 'credit_limit':
-        return 'Supplier Credit Limit';
+        return 'Supplier Fiduciary Credit Limit Threshold';
       case 'dc_allocation':
-        return 'Warehouse-First DC Allocation (WH-NORTH-01)';
+        return 'Central Warehouse-First DC Allocation (WH-NORTH-01)';
       case 'peer_transfer':
-        return 'Inter-Store Lateral Transfer Check';
+        return 'Inter-Store Lateral Transfer Verification';
       default:
-        return name;
+        return name.replace(/_/g, ' ').toUpperCase();
     }
   };
 
+  const evidenceEntries = check.numeric_evidence && typeof check.numeric_evidence === 'object'
+    ? Object.entries(check.numeric_evidence)
+    : [];
+
   return (
-    <div className="border border-slate-800/80 rounded-lg overflow-hidden bg-slate-900/40 hover:bg-slate-900/70 transition-colors">
+    <div className="border border-ledger-hairline rounded-xs overflow-hidden bg-ledger-surface hover:bg-ledger-subdued/20 transition-colors shadow-ledger-xs">
       <div
         className="p-3.5 flex items-center justify-between cursor-pointer select-none"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="flex items-center space-x-3">
-          {getStatusIcon(check.status)}
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-medium text-sm text-slate-200">{formatName(check.check_name)}</span>
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="w-7 h-7 rounded-xs bg-ledger-ground border border-ledger-hairline flex items-center justify-center shrink-0">
+            {getStatusIcon(check.status)}
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-serif font-bold text-sm text-ledger-ink tracking-tight">
+                {formatName(check.check_name)}
+              </span>
               {getStatusBadge(check.status)}
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">{check.reason}</p>
+            <p className="text-xs text-ledger-muted mt-0.5 font-sans leading-normal">
+              {check.reason}
+            </p>
           </div>
         </div>
+
         <button
           type="button"
-          className="text-slate-500 hover:text-slate-300 p-1 rounded"
-          aria-label="Toggle evidence"
+          className="text-ledger-muted hover:text-ledger-ink p-1 rounded transition-colors shrink-0 ml-3"
+          aria-label="Toggle evidence details"
         >
           {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
       </div>
 
       {expanded && (
-        <div className="px-4 py-3 bg-slate-950/70 border-t border-slate-800/80">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Numeric Evidence (Computed by code)
+        <div className="px-4 py-3 bg-ledger-subdued/40 border-t border-ledger-hairline">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-mono font-semibold text-ledger-crimson uppercase tracking-widest flex items-center gap-1.5">
+              <FileCode className="w-3 h-3" />
+              <span>DETERMINISTIC NUMERIC EVIDENCE (PYTHON CODE-EVALUATED)</span>
             </span>
           </div>
-          <pre className="text-xs text-indigo-300 font-mono bg-slate-900/90 p-2.5 rounded border border-slate-800 overflow-x-auto">
-            {JSON.stringify(check.numeric_evidence, null, 2)}
-          </pre>
+
+          {evidenceEntries.length > 0 ? (
+            <div className="border border-ledger-hairline bg-ledger-surface p-3 rounded-xs space-y-0.5">
+              {evidenceEntries.map(([k, v]) => (
+                <LedgerRow
+                  key={k}
+                  label={k.replace(/_/g, ' ')}
+                  value={
+                    typeof v === 'number'
+                      ? v > 1000
+                        ? `₹ ${v.toLocaleString('en-IN')}`
+                        : v
+                      : typeof v === 'boolean'
+                      ? v ? 'TRUE [PASS]' : 'FALSE [FAIL]'
+                      : typeof v === 'object'
+                      ? JSON.stringify(v)
+                      : String(v)
+                  }
+                />
+              ))}
+            </div>
+          ) : (
+            <pre className="text-[11px] text-ledger-ink font-mono bg-ledger-surface p-3 rounded-xs border border-ledger-hairline overflow-x-auto">
+              {JSON.stringify(check.numeric_evidence, null, 2)}
+            </pre>
+          )}
         </div>
       )}
     </div>

@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { ApprovalRequest, ApproverInfo } from '../types';
 import { RiskBadge } from '../components/RiskBadge';
-import { Inbox, ArrowRight, RefreshCw, UserCheck } from 'lucide-react';
+import { StampBadge, LedgerEmptyState, LedgerSkeleton, HashBlock } from '../components/primitives';
+import { ArrowRight, RefreshCw, FileText, CheckCircle2 } from 'lucide-react';
 
 interface ApprovalQueuePageProps {
   currentApprover: ApproverInfo | null;
@@ -36,43 +37,51 @@ export const ApprovalQueuePage: React.FC<ApprovalQueuePageProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Header Folio */}
+      <div className="flex flex-wrap items-end justify-between gap-4 pb-4 border-b border-ledger-hairline">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Pending Approval Queue</h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Gated purchase orders requiring human authorization prior to ERP write.
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-xs bg-ledger-crimson inline-block" />
+            <span className="font-mono text-[10px] uppercase tracking-widest text-ledger-muted">
+              Fiduciary Authorization Registry
+            </span>
+          </div>
+          <h1 className="text-3xl font-serif font-bold text-ledger-ink tracking-tight">
+            Pending Approval Queue
+          </h1>
+          <p className="text-xs text-ledger-muted mt-1 font-sans">
+            Gated purchase orders requiring statutory authorization prior to autonomous ERP commit.
           </p>
         </div>
 
-        {/* Filter buttons */}
-        <div className="flex items-center space-x-2 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs font-semibold">
+        {/* Role-scoped docket filter */}
+        <div className="flex items-center space-x-1.5 bg-ledger-vellum p-1 rounded-xs border border-ledger-hairline text-xs font-mono">
           <button
             onClick={() => setRoleFilter('all')}
-            className={`px-3 py-1.5 rounded-md transition-colors ${
+            className={`px-3 py-1.5 rounded-xs transition-colors tracking-wide ${
               roleFilter === 'all'
-                ? 'bg-indigo-600 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-ledger-ink text-white shadow-xs font-bold'
+                : 'text-ledger-muted hover:text-ledger-ink'
             }`}
           >
             All Pending ({approvals.length})
           </button>
           <button
             onClick={() => setRoleFilter('store_manager')}
-            className={`px-3 py-1.5 rounded-md transition-colors ${
+            className={`px-3 py-1.5 rounded-xs transition-colors tracking-wide ${
               roleFilter === 'store_manager'
-                ? 'bg-indigo-600 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-ledger-ink text-white shadow-xs font-bold'
+                : 'text-ledger-muted hover:text-ledger-ink'
             }`}
           >
             Store Manager
           </button>
           <button
             onClick={() => setRoleFilter('regional_manager')}
-            className={`px-3 py-1.5 rounded-md transition-colors ${
+            className={`px-3 py-1.5 rounded-xs transition-colors tracking-wide ${
               roleFilter === 'regional_manager'
-                ? 'bg-indigo-600 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-ledger-ink text-white shadow-xs font-bold'
+                : 'text-ledger-muted hover:text-ledger-ink'
             }`}
           >
             Regional Manager
@@ -80,77 +89,102 @@ export const ApprovalQueuePage: React.FC<ApprovalQueuePageProps> = ({
         </div>
       </div>
 
-      {/* Queue Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+      {/* Queue Docket Table */}
+      <div className="bg-ledger-surface border border-ledger-hairline rounded-xs overflow-hidden shadow-xs">
         {loading && approvals.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">
-            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-3 text-indigo-400" />
-            <span>Loading pending approvals...</span>
+          <div className="p-8 space-y-4">
+            <div className="flex items-center gap-2 text-xs font-mono text-ledger-muted">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-ledger-ink" />
+              <span>Fetching pending dockets from immutable ledger...</span>
+            </div>
+            <LedgerSkeleton lines={4} />
           </div>
         ) : approvals.length === 0 ? (
-          <div className="p-16 text-center text-slate-500">
-            <Inbox className="w-12 h-12 mx-auto mb-3 text-slate-600" />
-            <h3 className="text-base font-bold text-slate-300">Approval Queue Empty</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              All replenishment orders have been approved, rejected, or auto-approved.
-            </p>
+          <div className="py-16 px-4">
+            <LedgerEmptyState
+              title="Fiduciary Queue Clear"
+              description="All replenishment orders have been authorized, rejected, or auto-committed under deterministic governance rules."
+              folio="QUEUE CLEARED"
+            />
           </div>
         ) : (
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
-              <tr>
-                <th className="p-4">Action</th>
-                <th className="p-4">Assigned Role</th>
-                <th className="p-4">Risk Class</th>
-                <th className="p-4 text-right">Order Value</th>
-                <th className="p-4">Requested</th>
-                <th className="p-4 text-right">Decision</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {approvals.map((a) => {
-                const canDecide =
-                  currentApprover?.role === 'regional_manager' ||
-                  currentApprover?.role === a.assigned_role;
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-ledger-vellum border-b border-ledger-hairline text-ledger-muted font-mono text-[10px] uppercase tracking-wider">
+                  <th className="py-3 px-4 font-semibold">Fiduciary Action &amp; Origin</th>
+                  <th className="py-3 px-4 font-semibold">Assigned Role</th>
+                  <th className="py-3 px-4 font-semibold">Risk Classification</th>
+                  <th className="py-3 px-4 font-semibold text-right">Commitment Value</th>
+                  <th className="py-3 px-4 font-semibold">Docket Timestamp</th>
+                  <th className="py-3 px-4 font-semibold text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-ledger-hairline">
+                {approvals.map((a) => {
+                  const canDecide =
+                    currentApprover?.role === 'regional_manager' ||
+                    currentApprover?.role === a.assigned_role;
 
-                return (
-                  <tr key={a.approval_id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="p-4">
-                      <div className="font-semibold text-slate-200 text-sm">
-                        Create Purchase Order
-                      </div>
-                      <div className="text-slate-400 font-mono text-[11px] mt-0.5">
-                        Run: {a.run_id.slice(0, 8)}... • Supplier: {a.tool_args?.supplier_name || a.tool_args?.supplier_id || 'SUP'}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span className="capitalize px-2.5 py-1 rounded bg-slate-950 text-slate-300 border border-slate-800 font-medium">
-                        {a.assigned_role.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <RiskBadge riskClass={a.risk_class || 'low'} />
-                    </td>
-                    <td className="p-4 text-right font-mono font-bold text-emerald-400 text-sm">
-                      ₹{Number(a.total_value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="p-4 font-mono text-slate-400">
-                      {new Date(a.requested_at).toLocaleTimeString()}
-                    </td>
-                    <td className="p-4 text-right">
-                      <button
-                        onClick={() => onSelectApproval(a.approval_id, a.run_id)}
-                        className="inline-flex items-center px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-950/50 transition-colors"
-                      >
-                        <span>Review</span>
-                        <ArrowRight className="w-3.5 h-3.5 ml-1" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                  return (
+                    <tr
+                      key={a.approval_id}
+                      className="hover:bg-ledger-vellum/50 transition-colors group"
+                    >
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-start gap-2.5">
+                          <FileText className="w-4 h-4 text-ledger-muted mt-0.5 shrink-0" />
+                          <div>
+                            <div className="font-serif font-bold text-ledger-ink text-sm">
+                              Create Purchase Order
+                            </div>
+                            <div className="text-ledger-muted font-mono text-[11px] mt-0.5 flex items-center gap-1.5 flex-wrap">
+                              <span>Docket:</span>
+                              <HashBlock hash={a.approval_id} length="short" />
+                              <span className="text-ledger-hairline">•</span>
+                              <span>Run:</span>
+                              <HashBlock hash={a.run_id} length="short" />
+                              <span className="text-ledger-hairline">•</span>
+                              <span className="font-sans text-ledger-ink">
+                                {a.tool_args?.supplier_name || a.tool_args?.supplier_id || 'Primary Supplier'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <StampBadge
+                          label={a.assigned_role.replace('_', ' ')}
+                          variant={a.assigned_role === 'regional_manager' ? 'crimson' : 'neutral'}
+                          size="sm"
+                        />
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <RiskBadge riskClass={a.risk_class || 'low'} />
+                      </td>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <span className="font-mono font-bold text-sm text-ledger-ink">
+                          ₹{Number(a.total_value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-ledger-muted whitespace-nowrap">
+                        {new Date(a.requested_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </td>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => onSelectApproval(a.approval_id, a.run_id)}
+                          className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xs text-xs font-mono font-semibold uppercase tracking-wider text-white bg-ledger-ink hover:bg-black shadow-xs transition-all active:scale-[0.98]"
+                        >
+                          <span>Inspect</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

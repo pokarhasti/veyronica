@@ -54,7 +54,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-ledger-ground text-ledger-ink flex flex-col paper-grain selection:bg-ledger-crimson selection:text-white">
       <Header
         currentApprover={currentApprover}
         onSelectApprover={setCurrentApprover}
@@ -109,8 +109,22 @@ export const App: React.FC = () => {
         {activeTab === 'future' && <FuturePage />}
       </main>
 
-      <footer className="border-t border-slate-900 bg-slate-950 py-4 text-center text-xs text-slate-600">
-        Veyronica — Governed Agentic Replenishment Platform • SIH 2026 Production Build
+      <footer className="border-t border-ledger-hairline bg-ledger-surface/80 py-6 text-xs text-ledger-muted print:hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-xs bg-ledger-ink inline-block" />
+            <span className="font-serif italic font-semibold text-ledger-ink">Veyronica Ledger</span>
+            <span className="text-ledger-hairline">|</span>
+            <span>Autonomous Fiduciary Replenishment &amp; OTB Governance</span>
+          </div>
+          <div className="font-mono text-[11px] text-ledger-muted flex items-center gap-3">
+            <span>FOLIO ED-2026</span>
+            <span className="text-ledger-hairline">•</span>
+            <span>SHA-256 VERIFIED IMMUTABILITY</span>
+            <span className="text-ledger-hairline">•</span>
+            <span>SIH 2026</span>
+          </div>
+        </div>
       </footer>
     </div>
   );

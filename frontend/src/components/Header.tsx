@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ApproverInfo, HealthStatus } from '../types';
 import { api } from '../api/client';
-import { Shield, UserCheck, Activity, RotateCcw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Shield, UserCheck, RotateCcw, ShieldCheck, Scale, AlertTriangle } from 'lucide-react';
+import { StampBadge } from './primitives';
 
 interface HeaderProps {
   currentApprover: ApproverInfo | null;
@@ -33,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const handleResetDemo = async () => {
-    if (!window.confirm('Reset demo state to initial seed data?')) return;
+    if (!window.confirm('Reset ledger state to certified initial seed data?')) return;
     setResetting(true);
     try {
       await api.resetDemo();
@@ -48,54 +49,66 @@ export const Header: React.FC<HeaderProps> = ({
   const isHealthy = health?.postgres === 'ok' && health?.temporal === 'ok';
 
   return (
-    <header className="bg-slate-900/90 border-b border-slate-800 backdrop-blur sticky top-0 z-40">
-      {/* Top Banner */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
-        {/* Brand */}
-        <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-950/80">
-            <Shield className="w-5 h-5 text-white" />
+    <header className="bg-ledger-surface border-b border-ledger-hairline sticky top-0 z-40 shadow-ledger-xs select-none">
+      {/* Top Meta Strip (CMP-08): Archival Edition & Cryptographic Health */}
+      <div className="border-b border-ledger-hairline bg-ledger-subdued/50 px-4 sm:px-6 lg:px-8 py-1.5 text-[10px] font-mono text-ledger-muted flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <span className="font-semibold text-ledger-crimson">ARCHIVAL FOLIO § 2026-DISPATCH</span>
+          <span className="text-ledger-hairline-dark">•</span>
+          <span className="hidden sm:inline">GINESYS RETAIL ERP SCHEMA PROTOCOL</span>
+          <span className="text-ledger-hairline-dark hidden sm:inline">•</span>
+          <span className="text-ledger-faint">CHAIN HEAD: SHA-256 PROVEN</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div
+            className="flex items-center gap-1.5 cursor-help"
+            title={`Postgres: ${health?.postgres || '...'} | Temporal: ${health?.temporal || '...'} | Worker: ${health?.worker || '...'}`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${isHealthy ? 'bg-emerald-600' : 'bg-amber-600'}`} />
+            <span className="font-semibold text-ledger-ink uppercase">
+              {isHealthy ? 'ENGINES CERTIFIED' : 'SERVICES RECONCILING'}
+            </span>
           </div>
+          <span className="text-ledger-hairline-dark">•</span>
+          <span className="text-ledger-faint font-sans">Veyronica v0.1.0</span>
+        </div>
+      </div>
+
+      {/* Main Archival Masthead (CMP-01) */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+        {/* Brand Masthead */}
+        <div className="flex items-center space-x-3.5">
+          <div className="w-9 h-9 rounded-xs bg-ledger-ground border border-ledger-hairline flex items-center justify-center text-ledger-crimson shadow-ledger-xs">
+            <Scale className="w-5 h-5 stroke-[1.75]" />
+          </div>
+
           <div>
-            <div className="flex items-center space-x-2">
-              <span className="text-lg font-bold tracking-tight text-white">Veyronica</span>
-              <span className="text-[10px] tracking-wide font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                v0.1.0
+            <div className="flex items-baseline space-x-2">
+              <span className="font-serif text-2xl font-bold tracking-tight text-ledger-ink leading-none">
+                Veyronica
+              </span>
+              <span className="text-[10px] font-mono tracking-widest text-ledger-crimson uppercase font-semibold">
+                LEDGER DESK
               </span>
             </div>
-            <div className="flex items-center space-x-2">
-              <span className="text-[11px] text-slate-400">Governed Agentic Replenishment</span>
-              <span className="text-[10px] text-indigo-400 bg-indigo-950/60 px-1.5 py-0.2 rounded border border-indigo-900/60">
-                Simulated against Ginesys/retail ERP schema
-              </span>
+            <div className="text-[11px] text-ledger-muted font-sans mt-0.5">
+              Governed Agentic Procurement & Fiduciary Order Requisitions
             </div>
           </div>
         </div>
 
-        {/* Controls: Persona Switcher + Health + Reset */}
-        <div className="flex items-center space-x-4">
-          {/* Adapter Health Indicator */}
-          <div
-            className="flex items-center space-x-1.5 text-xs px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800"
-            title={`Postgres: ${health?.postgres || '...'} | Temporal: ${health?.temporal || '...'} | Worker: ${health?.worker || '...'}`}
-          >
-            {isHealthy ? (
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            ) : (
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
-            )}
-            <span className="text-slate-400 text-[11px] font-mono">
-              {isHealthy ? 'Services Online' : 'Services Check'}
+        {/* Controls: Signatory Switcher + Reset */}
+        <div className="flex items-center space-x-3">
+          {/* Signatory Selector ("Acting as") */}
+          <div className="flex items-center space-x-2 bg-ledger-ground border border-ledger-hairline px-3 py-1.5 rounded-xs shadow-ledger-xs">
+            <UserCheck className="w-3.5 h-3.5 text-ledger-crimson shrink-0" />
+            <span className="text-[11px] font-mono uppercase tracking-wider text-ledger-muted select-none">
+              SIGNATORY:
             </span>
-          </div>
-
-          {/* Persona Switcher: "Acting as" */}
-          <div className="flex items-center space-x-2 bg-slate-950/80 border border-slate-800 px-3 py-1.5 rounded-lg">
-            <UserCheck className="w-4 h-4 text-indigo-400" />
-            <span className="text-xs text-slate-400">Acting as:</span>
             <select
-              aria-label="Acting as persona"
-              className="bg-transparent text-xs font-semibold text-slate-200 focus:outline-none cursor-pointer"
+              aria-label="Acting as signatory persona"
+              className="bg-transparent text-xs font-semibold font-mono text-ledger-ink focus:outline-none cursor-pointer"
               value={currentApprover?.approver_id || ''}
               onChange={(e) => {
                 const found = approvers.find((a) => a.approver_id === e.target.value);
@@ -103,51 +116,50 @@ export const Header: React.FC<HeaderProps> = ({
               }}
             >
               {approvers.map((a) => (
-                <option key={a.approver_id} value={a.approver_id} className="bg-slate-900 text-slate-100">
-                  {a.name} ({a.role.replace('_', ' ')})
+                <option key={a.approver_id} value={a.approver_id} className="bg-white text-stone-900 font-mono">
+                  {a.name} [{a.role.replace('_', ' ').toUpperCase()}]
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Demo Reset */}
+          {/* Demo Reset Button */}
           <button
             type="button"
             onClick={handleResetDemo}
             disabled={resetting}
-            title="Reset demo data"
-            className="p-1.5 text-slate-400 hover:text-white bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-lg transition-colors"
+            title="Reset ledger to initial seed state"
+            className="p-2 text-ledger-muted hover:text-ledger-crimson bg-ledger-ground hover:bg-ledger-surface border border-ledger-hairline rounded-xs transition-colors shadow-ledger-xs cursor-pointer disabled:opacity-50"
           >
-            <RotateCcw className={`w-4 h-4 ${resetting ? 'animate-spin' : ''}`} />
+            <RotateCcw className={`w-3.5 h-3.5 ${resetting ? 'animate-spin text-ledger-crimson' : ''}`} />
           </button>
         </div>
       </div>
 
-      {/* Navigation Bar */}
-      <div className="border-t border-slate-800/80 bg-slate-950/40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1 overflow-x-auto text-xs font-medium">
+      {/* Gazette Section Navigation Strip */}
+      <div className="border-t border-ledger-hairline bg-ledger-ground/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1 overflow-x-auto text-xs">
           {[
-            { id: 'trigger', label: 'Replenishment Check' },
-            { id: 'queue', label: 'Approval Queue', badge: pendingCount > 0 ? pendingCount : undefined },
-            { id: 'runs', label: 'Workflow Runs' },
-            { id: 'audit', label: 'Audit Trail' },
-            { id: 'dashboard', label: 'Metrics Dashboard' },
-            { id: 'future', label: 'Future Extensibility' },
+            { id: 'trigger', folio: '§ 01', label: 'Replenishment Check' },
+            { id: 'queue', folio: '§ 02', label: 'Approval Queue', badge: pendingCount > 0 ? pendingCount : undefined },
+            { id: 'runs', folio: '§ 03', label: 'Workflow Runs' },
+            { id: 'audit', folio: '§ 04', label: 'Audit Trail' },
+            { id: 'dashboard', folio: '§ 05', label: 'Metrics Desk' },
+            { id: 'future', folio: '§ 06', label: 'Policy Learning' },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => onSelectTab(tab.id)}
-              className={`px-4 py-2.5 border-b-2 transition-colors flex items-center space-x-1.5 whitespace-nowrap ${
+              className={`px-4 py-2.5 border-b-2 transition-all flex items-center space-x-2 whitespace-nowrap min-h-[42px] cursor-pointer ${
                 activeTab === tab.id
-                  ? 'border-indigo-500 text-indigo-400 font-semibold bg-slate-900/50'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                  ? 'border-ledger-crimson text-ledger-crimson font-serif font-bold bg-ledger-surface shadow-ledger-xs'
+                  : 'border-transparent text-ledger-muted hover:text-ledger-ink hover:border-ledger-hairline-dark font-sans'
               }`}
             >
-              <span>{tab.label}</span>
+              <span className="text-[10px] font-mono tracking-wider opacity-60">{tab.folio}</span>
+              <span className="tracking-tight">{tab.label}</span>
               {tab.badge !== undefined && (
-                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800">
-                  {tab.badge}
-                </span>
+                <StampBadge label={`${tab.badge} PENDING`} variant="pending" size="sm" />
               )}
             </button>
           ))}

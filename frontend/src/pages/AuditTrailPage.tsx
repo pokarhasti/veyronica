@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { AuditEvent } from '../types';
+import { StampBadge, HashBlock, LedgerEmptyState, LedgerSkeleton } from '../components/primitives';
 import {
-  ShieldAlert,
   ShieldCheck,
   Search,
   RefreshCw,
   ChevronDown,
   ChevronRight,
   Filter,
-  CheckCircle2,
   Lock,
   Hash,
-  ExternalLink,
+  Award,
+  CheckCircle2,
+  FileKey,
 } from 'lucide-react';
 
 export const AuditTrailPage: React.FC = () => {
@@ -38,6 +39,7 @@ export const AuditTrailPage: React.FC = () => {
 
   const fetchAudit = async () => {
     try {
+      setLoading(true);
       const data = await api.getAuditEvents({
         event_type: eventTypeFilter || undefined,
         run_id: runIdFilter || undefined,
@@ -68,111 +70,127 @@ export const AuditTrailPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Folio Masthead Header */}
+      <div className="flex flex-wrap items-end justify-between gap-4 pb-4 border-b border-ledger-hairline">
         <div>
-          <div className="flex items-center space-x-2">
-            <h1 className="text-2xl font-bold text-slate-100">Immutable Audit Trail</h1>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-              Append-Only Triggers Enforced
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-xs bg-emerald-800 inline-block" />
+            <span className="font-mono text-[10px] uppercase tracking-widest text-ledger-muted">
+              Append-Only Cryptographic Register
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Every state transition, agent signal, check result, and human approval is cryptographically logged with zero update/delete permission.
+          <h1 className="text-3xl font-serif font-bold text-ledger-ink tracking-tight">
+            Immutable Audit Trail
+          </h1>
+          <p className="text-xs text-ledger-muted mt-1 font-sans max-w-2xl">
+            Every state transition, inventory signal, constraint check, and human authorization is sequentially hashed and sealed under strict PostgreSQL append-only immutability triggers.
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
-          {/* Innovation 3.5: Cryptographic Integrity Verifier Button */}
+        <div className="flex items-center gap-2.5">
           <button
             onClick={handleVerifyIntegrity}
             disabled={verifying}
-            className="flex items-center space-x-2 px-3.5 py-2 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-xs font-semibold shadow-lg shadow-emerald-950/40 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xs bg-emerald-50 hover:bg-emerald-100 border border-emerald-800/40 text-emerald-900 text-xs font-mono font-semibold tracking-wider transition-colors shadow-xs active:scale-[0.98]"
           >
-            <ShieldCheck className={`w-4 h-4 ${verifying ? 'animate-spin' : ''}`} />
-            <span>{verifying ? 'Verifying Hashes...' : 'Verify Cryptographic Integrity'}</span>
+            <ShieldCheck className={`w-4 h-4 text-emerald-800 ${verifying ? 'animate-spin' : ''}`} />
+            <span>{verifying ? 'VERIFYING CHAIN...' : 'AUDIT CRYPTOGRAPHIC INTEGRITY'}</span>
           </button>
 
           <button
             onClick={fetchAudit}
-            className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition-colors"
-            title="Refresh audit events"
+            className="p-2 rounded-xs bg-ledger-surface hover:bg-ledger-vellum border border-ledger-hairline text-ledger-ink transition-colors shadow-xs active:scale-[0.98]"
+            title="Refresh audit journal"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-ledger-ink' : 'text-ledger-muted'}`} />
           </button>
         </div>
       </div>
 
-      {/* Innovation 3.5: Live Cryptographic Verification Certificate Card */}
+      {/* Signature Embossed Cryptographic Verification Certificate */}
       {integrityData && (
-        <div className="bg-gradient-to-r from-emerald-950/40 via-slate-900 to-indigo-950/30 border border-emerald-700/80 rounded-xl p-5 shadow-2xl space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-800/60 pb-3">
-            <div className="flex items-center space-x-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-400" />
-              <span className="font-bold text-emerald-300 text-sm">
-                Cryptographic Integrity Certificate: Zero Tampering Detected
-              </span>
+        <div className="bg-emerald-50/50 border-2 border-emerald-800/40 rounded-xs p-6 shadow-ledger-stamp space-y-5 paper-grain relative">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-800/20 pb-3">
+            <div className="flex items-center space-x-2.5">
+              <Award className="w-5 h-5 text-emerald-800" />
+              <div>
+                <span className="font-serif font-bold text-emerald-950 text-base block">
+                  Statutory Audit Certificate of Integrity
+                </span>
+                <span className="text-[11px] font-sans text-emerald-900/80">
+                  Cryptographic verification confirms zero tampering across the sequential event chain.
+                </span>
+              </div>
             </div>
-            <div className="text-[11px] font-mono text-emerald-400/90 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800">
-              Algorithm: {integrityData.algorithm}
-            </div>
+            <StampBadge label="ZERO TAMPERING DETECTED" variant="certified" size="sm" />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-            <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
-              <span className="text-slate-400 block mb-1">Total Blocks Chained</span>
-              <span className="text-xl font-bold font-mono text-slate-100">
-                {integrityData.total_events_verified} Events
+            <div className="bg-ledger-surface/90 p-3.5 rounded-xs border border-emerald-800/20 shadow-xs">
+              <span className="font-mono text-[10px] uppercase text-ledger-muted block mb-1 font-semibold">
+                Total Events Chained
               </span>
-              <div className="text-[11px] text-emerald-400 mt-1 flex items-center space-x-1">
-                <CheckCircle2 className="w-3 h-3" />
-                <span>Sequential Hash Verified</span>
+              <span className="font-serif text-2xl font-bold text-ledger-ink">
+                {integrityData.total_events_verified}
+              </span>
+              <div className="text-[11px] text-emerald-800 mt-1 font-mono flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                <span>Sequential SHA-256 Validated</span>
               </div>
             </div>
 
-            <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
-              <span className="text-slate-400 block mb-1">PostgreSQL Immutability Triggers</span>
-              <span className="text-xl font-bold text-emerald-300 flex items-center space-x-1.5">
-                <Lock className="w-4 h-4" />
-                <span>Enforced</span>
+            <div className="bg-ledger-surface/90 p-3.5 rounded-xs border border-emerald-800/20 shadow-xs">
+              <span className="font-mono text-[10px] uppercase text-ledger-muted block mb-1 font-semibold">
+                PostgreSQL Immutability Triggers
               </span>
-              <div className="text-[10px] font-mono text-slate-400 mt-1">
+              <div className="font-serif text-2xl font-bold text-emerald-900 flex items-center gap-1.5">
+                <Lock className="w-4 h-4 text-emerald-800" />
+                <span>Enforced</span>
+              </div>
+              <div className="text-[10px] font-mono text-ledger-muted mt-1 truncate" title={integrityData.active_triggers.join(', ')}>
                 {integrityData.active_triggers.join(', ') || 'trg_audit_no_update, trg_audit_no_delete'}
               </div>
             </div>
 
-            <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
-              <span className="text-slate-400 block mb-1">Verified Timestamp</span>
-              <span className="text-sm font-semibold font-mono text-slate-200">
-                {new Date(integrityData.verified_at).toLocaleTimeString()}
+            <div className="bg-ledger-surface/90 p-3.5 rounded-xs border border-emerald-800/20 shadow-xs">
+              <span className="font-mono text-[10px] uppercase text-ledger-muted block mb-1 font-semibold">
+                Audit Verification Timestamp
               </span>
-              <div className="text-[11px] text-slate-400 mt-1">
-                {new Date(integrityData.verified_at).toLocaleDateString()}
+              <span className="font-serif text-base font-bold text-ledger-ink block">
+                {new Date(integrityData.verified_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+              <div className="text-[11px] font-mono text-ledger-muted mt-1">
+                {new Date(integrityData.verified_at).toLocaleDateString()} • {integrityData.algorithm}
               </div>
             </div>
           </div>
 
-          {/* Root Hash Monospace Box */}
-          <div className="bg-slate-950/90 p-3 rounded-lg border border-slate-800 text-xs">
-            <div className="flex items-center space-x-1.5 text-slate-400 mb-1">
-              <Hash className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="font-semibold text-slate-300">Root SHA-256 Digest (Chain Anchor):</span>
+          {/* Root Hash Monospace Certificate Anchor */}
+          <div className="bg-ledger-surface/90 p-3.5 rounded-xs border border-emerald-800/20 shadow-xs space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center space-x-1.5 font-mono text-[11px] font-bold text-ledger-ink uppercase tracking-wider">
+                <Hash className="w-3.5 h-3.5 text-emerald-800" />
+                <span>Root SHA-256 Digest (Cryptographic Anchor):</span>
+              </div>
+              <span className="text-[10px] font-mono text-emerald-800 uppercase font-semibold">
+                IMMUTABLE CHAIN ROOT
+              </span>
             </div>
-            <div className="font-mono text-indigo-300 text-[11px] break-all bg-slate-900 p-2 rounded border border-slate-800">
-              {integrityData.root_hash}
+            <div className="p-2.5 rounded-xs bg-ledger-vellum border border-ledger-hairline">
+              <HashBlock hash={integrityData.root_hash} length="full" label="CHAIN ROOT" />
             </div>
           </div>
         </div>
       )}
 
-      {/* Filter Bar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center gap-4">
-        <div className="flex items-center space-x-2">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <span className="text-xs text-slate-400 font-semibold">Event Type:</span>
+      {/* Filter Ledger Bar */}
+      <div className="bg-ledger-surface border border-ledger-hairline rounded-xs p-3 shadow-xs flex flex-wrap items-center gap-3">
+        <div className="flex items-center space-x-2 bg-ledger-vellum border border-ledger-hairline rounded-xs px-2.5 py-1.5 text-xs font-mono">
+          <Filter className="w-3.5 h-3.5 text-ledger-muted" />
+          <span className="text-ledger-muted text-[10px] uppercase font-bold">EVENT TYPE:</span>
           <select
             aria-label="Filter by event type"
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
+            className="bg-transparent text-ledger-ink font-semibold focus:outline-none cursor-pointer"
             value={eventTypeFilter}
             onChange={(e) => setEventTypeFilter(e.target.value)}
           >
@@ -192,66 +210,98 @@ export const AuditTrailPage: React.FC = () => {
           </select>
         </div>
 
-        <div className="flex items-center space-x-2 flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 text-slate-400" />
+        <div className="relative flex-1 min-w-[220px]">
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-ledger-muted" />
           <input
             type="text"
-            placeholder="Filter by Run ID..."
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 w-full"
+            placeholder="Filter by Run ID or correlation hash..."
+            className="w-full bg-ledger-vellum border border-ledger-hairline rounded-xs pl-8 pr-3 py-1.5 text-xs font-mono text-ledger-ink placeholder:text-ledger-muted focus:outline-none focus:border-ledger-ink transition-colors"
             value={runIdFilter}
             onChange={(e) => setRunIdFilter(e.target.value)}
           />
         </div>
       </div>
 
-      {/* Events List */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+      {/* Events Ledger List */}
+      <div className="bg-ledger-surface border border-ledger-hairline rounded-xs overflow-hidden shadow-xs">
         {loading ? (
-          <div className="p-8 text-center text-slate-400">Loading audit trail...</div>
+          <div className="p-8 space-y-4">
+            <div className="flex items-center gap-2 text-xs font-mono text-ledger-muted">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-ledger-ink" />
+              <span>Fetching audit transactions from immutable ledger...</span>
+            </div>
+            <LedgerSkeleton lines={5} />
+          </div>
         ) : events.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 text-sm">
-            No audit events found matching the criteria.
+          <div className="py-12 px-4">
+            <LedgerEmptyState
+              title="No Audit Records Matched"
+              description="No journal events correspond to the active filter criteria. Clear the filter parameters to view the chronological log."
+              folio="EMPTY LEDGER"
+              action={
+                (eventTypeFilter || runIdFilter) ? (
+                  <button
+                    onClick={() => {
+                      setEventTypeFilter('');
+                      setRunIdFilter('');
+                    }}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-ledger-ink text-white text-xs font-mono uppercase tracking-wider rounded-xs transition-colors"
+                  >
+                    Reset Filters
+                  </button>
+                ) : undefined
+              }
+            />
           </div>
         ) : (
-          <div className="divide-y divide-slate-800/80">
+          <div className="divide-y divide-ledger-hairline">
             {events.map((e) => {
               const isExpanded = expandedId === e.event_id;
+
+              let badgeVariant: 'certified' | 'pending' | 'rejected' | 'neutral' | 'crimson' = 'neutral';
+              if (e.event_type.includes('completed') || e.event_type.includes('executed')) badgeVariant = 'certified';
+              else if (e.event_type.includes('rejected') || e.event_type.includes('failed')) badgeVariant = 'crimson';
+              else if (e.event_type.includes('requested') || e.event_type.includes('overridden')) badgeVariant = 'pending';
+
               return (
-                <div key={e.event_id} className="hover:bg-slate-800/40 transition-colors">
+                <div key={e.event_id} className="hover:bg-ledger-vellum/50 transition-colors">
                   <div
-                    className="p-4 flex items-center justify-between cursor-pointer select-none"
+                    className="p-3.5 flex flex-wrap items-center justify-between gap-3 cursor-pointer select-none"
                     onClick={() => setExpandedId(isExpanded ? null : e.event_id)}
                   >
-                    <div className="flex items-center space-x-3">
-                      <button className="text-slate-500">
+                    <div className="flex items-center space-x-3 flex-wrap gap-y-1">
+                      <button className="text-ledger-muted hover:text-ledger-ink transition-colors">
                         {isExpanded ? (
                           <ChevronDown className="w-4 h-4" />
                         ) : (
                           <ChevronRight className="w-4 h-4" />
                         )}
                       </button>
-                      <span className="font-mono text-xs text-indigo-400">#{e.event_id}</span>
-                      <span className="font-bold text-xs text-slate-200 px-2 py-0.5 rounded bg-slate-950 border border-slate-800">
-                        {e.event_type}
+                      <span className="font-mono text-xs font-bold text-ledger-muted">
+                        #{String(e.event_id).padStart(4, '0')}
                       </span>
-                      <span className="text-xs text-slate-400 font-mono">
-                        Run: {e.run_id.slice(0, 8)}...
-                      </span>
-                      <span className="text-[11px] text-slate-500">
-                        Actor: <strong className="text-slate-300">{e.actor_id}</strong> (
-                        {e.actor_type})
+                      <StampBadge label={e.event_type} variant={badgeVariant} size="sm" />
+                      <div className="flex items-center gap-1 font-mono text-xs text-ledger-muted">
+                        <span>Run:</span>
+                        <HashBlock hash={e.run_id} length="short" />
+                      </div>
+                      <span className="text-xs text-ledger-ink font-mono">
+                        Actor: <strong>{e.actor_id}</strong> <span className="text-ledger-muted text-[11px]">({e.actor_type})</span>
                       </span>
                     </div>
 
-                    <div className="text-xs text-slate-400 font-mono">
-                      {new Date(e.created_at).toLocaleTimeString()}
+                    <div className="text-xs text-ledger-muted font-mono whitespace-nowrap">
+                      {new Date(e.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </div>
                   </div>
 
                   {isExpanded && (
-                    <div className="px-10 pb-4 pt-1 bg-slate-950/60 border-t border-slate-800/60">
-                      <div className="text-xs font-semibold text-slate-400 mb-1">Event Payload:</div>
-                      <pre className="text-xs text-indigo-300 font-mono bg-slate-900 p-3 rounded border border-slate-800 overflow-x-auto">
+                    <div className="px-10 pb-4 pt-1 bg-ledger-vellum/60 border-t border-ledger-hairline">
+                      <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-ledger-muted mb-1.5 flex items-center gap-1.5">
+                        <FileKey className="w-3.5 h-3.5" />
+                        <span>Cryptographic Event Payload (JSON-LD Immutable):</span>
+                      </div>
+                      <pre className="text-xs text-ledger-ink font-mono bg-ledger-surface p-3 rounded-xs border border-ledger-hairline overflow-x-auto shadow-xs leading-relaxed">
                         {JSON.stringify(e.payload, null, 2)}
                       </pre>
                     </div>

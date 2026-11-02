@@ -1,5 +1,6 @@
 import React from 'react';
 import { Check, Clock, AlertCircle, Ban } from 'lucide-react';
+import { StampBadge } from './primitives/StampBadge';
 
 interface TimelineStep {
   id: string;
@@ -14,8 +15,8 @@ interface TimelineProps {
 
 export const Timeline: React.FC<TimelineProps> = ({ steps }) => {
   return (
-    <div className="relative border-l border-slate-800 ml-4 my-4 space-y-6">
-      {steps.map((step) => {
+    <div className="relative border-l border-ledger-hairline ml-3.5 my-4 space-y-6">
+      {steps.map((step, idx) => {
         const isCompleted = step.status === 'completed';
         const isInProgress = step.status === 'in_progress';
         const isRejected = step.status === 'rejected';
@@ -23,17 +24,18 @@ export const Timeline: React.FC<TimelineProps> = ({ steps }) => {
 
         return (
           <div key={step.id} className="relative pl-6">
+            {/* Archival Step Marker Node */}
             <span
-              className={`absolute -left-3 top-0.5 flex items-center justify-center w-6 h-6 rounded-full border text-xs ${
+              className={`absolute -left-3 top-0.5 flex items-center justify-center w-6 h-6 rounded-xs border text-xs shadow-ledger-xs transition-all ${
                 isCompleted
-                  ? 'bg-emerald-950 border-emerald-600 text-emerald-400'
+                  ? 'bg-emerald-50 border-emerald-800/50 text-emerald-800'
                   : isInProgress
-                  ? 'bg-indigo-950 border-indigo-500 text-indigo-300 animate-pulse'
+                  ? 'bg-amber-50 border-amber-800/60 text-amber-900 animate-pulse'
                   : isRejected
-                  ? 'bg-amber-950 border-amber-600 text-amber-400'
+                  ? 'bg-rose-50 border-rose-900/50 text-ledger-crimson'
                   : isFailed
-                  ? 'bg-rose-950 border-rose-600 text-rose-400'
-                  : 'bg-slate-900 border-slate-800 text-slate-600'
+                  ? 'bg-rose-50 border-rose-900/50 text-ledger-crimson'
+                  : 'bg-ledger-ground border-ledger-hairline text-ledger-faint'
               }`}
             >
               {isCompleted ? (
@@ -45,36 +47,44 @@ export const Timeline: React.FC<TimelineProps> = ({ steps }) => {
               ) : isFailed ? (
                 <AlertCircle className="w-3.5 h-3.5" />
               ) : (
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+                <span className="font-mono text-[9px] font-semibold text-ledger-faint">
+                  {idx + 1}
+                </span>
               )}
             </span>
 
             <div>
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span
-                  className={`text-sm font-medium ${
+                  className={`text-sm tracking-tight ${
                     isCompleted
-                      ? 'text-slate-200'
+                      ? 'font-serif font-bold text-ledger-ink'
                       : isInProgress
-                      ? 'text-indigo-400 font-semibold'
+                      ? 'font-serif font-bold text-ledger-crimson'
                       : isRejected
-                      ? 'text-amber-400'
+                      ? 'font-serif font-bold text-ledger-crimson'
                       : isFailed
-                      ? 'text-rose-400'
-                      : 'text-slate-500'
+                      ? 'font-serif font-bold text-ledger-crimson'
+                      : 'font-sans font-medium text-ledger-faint'
                   }`}
                 >
                   {step.label}
                 </span>
+
                 {isInProgress && (
-                  <span className="text-[10px] tracking-wide uppercase px-2 py-0.5 rounded bg-indigo-900/40 text-indigo-300 border border-indigo-700/50">
-                    Active
-                  </span>
+                  <StampBadge label="ACTIVE EVALUATION" variant="pending" size="sm" />
+                )}
+                {isCompleted && (
+                  <StampBadge label="CERTIFIED" variant="certified" size="sm" />
+                )}
+                {isRejected && (
+                  <StampBadge label="REJECTED" variant="rejected" size="sm" />
                 )}
               </div>
+
               {step.timestamp && (
-                <span className="text-xs text-slate-500 font-mono mt-0.5 block">
-                  {step.timestamp}
+                <span className="text-[11px] text-ledger-muted font-mono mt-0.5 block tracking-wider">
+                  RECORDED: {step.timestamp}
                 </span>
               )}
             </div>
