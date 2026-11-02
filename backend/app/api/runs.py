@@ -17,15 +17,22 @@ router = APIRouter(prefix="/api/runs", tags=["runs"])
 async def list_runs(
     db: AsyncSession = Depends(get_db),
     status: str | None = None,
+    store_id: str | None = None,
     limit: int = 50,
 ):
-    """List all runs, optionally filtered by status."""
-    query = "SELECT * FROM runs ORDER BY started_at DESC LIMIT :limit"
+    """List all runs, optionally filtered by status and/or store_id."""
+    conditions = []
     params: dict = {"limit": limit}
 
     if status:
-        query = "SELECT * FROM runs WHERE status = :status ORDER BY started_at DESC LIMIT :limit"
+        conditions.append("status = :status")
         params["status"] = status
+    if store_id:
+        conditions.append("store_id = :store_id")
+        params["store_id"] = store_id
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    query = f"SELECT * FROM runs {where_clause} ORDER BY started_at DESC LIMIT :limit"
 
     result = await db.execute(text(query), params)
     rows = result.mappings().all()

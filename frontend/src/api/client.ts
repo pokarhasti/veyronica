@@ -37,8 +37,14 @@ export const api = {
     ),
 
   // Runs
-  getRuns: (store_id?: string) =>
-    fetchJson<RunSummary[]>(`/api/runs${store_id ? `?store_id=${store_id}` : ''}`),
+  getRuns: (store_id?: string, status?: string, limit: number = 50) => {
+    const params = new URLSearchParams();
+    if (store_id) params.append('store_id', store_id);
+    if (status) params.append('status', status);
+    if (limit) params.append('limit', limit.toString());
+    const qs = params.toString();
+    return fetchJson<RunSummary[]>(`/api/runs${qs ? `?${qs}` : ''}`);
+  },
 
   getRun: (run_id: string) => fetchJson<RunDetail>(`/api/runs/${run_id}`),
 

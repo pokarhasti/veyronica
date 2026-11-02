@@ -10,6 +10,8 @@ import { AuditTrailPage } from './pages/AuditTrailPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { FuturePage } from './pages/FuturePage';
 
+import { WorkflowRunsPage } from './pages/WorkflowRunsPage';
+
 export const App: React.FC = () => {
   const [currentApprover, setCurrentApprover] = useState<ApproverInfo | null>(null);
   const [activeTab, setActiveTab] = useState<string>('trigger');
@@ -77,7 +79,7 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'runs' && (
-          <HomePage
+          <WorkflowRunsPage
             onNavigateToRun={navigateToRun}
             onNavigateToQueue={() => setActiveTab('queue')}
           />
