@@ -239,15 +239,17 @@ class LLMClient:
     def _resolve_gemini_model(self) -> str:
         """Resolve to valid Gemini model name."""
         m = (self.settings.gemini_model or self.settings.llm_model).lower()
-        if "3.8" in m:
-            return "gemini-3.8-flash"
+        if "3.5-flash-lite" in m or "lite" in m:
+            return "gemini-3.5-flash-lite"
+        if "3.5" in m:
+            return "gemini-3.5-flash"
         if "3.6" in m:
             return "gemini-3.6-flash"
-        if "3.5" in m or "lite" in m:
-            return "gemini-3.5-flash-lite"
+        if "3.8" in m:
+            return "gemini-3.8-flash"
         if "gemma" in m or "4" in m:
             return "gemma-4"
-        return "gemini-3.8-flash"
+        return "gemini-3.5-flash"
 
     async def _call_gemini_for_rationale(
         self,
@@ -268,10 +270,10 @@ class LLMClient:
             import google.generativeai as genai
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel(model_name)
-            response = model.generate_content(prompt, request_options={"timeout": 4})
+            response = model.generate_content(prompt, request_options={"timeout": 10})
             return response.text or ""
 
-        return await asyncio.wait_for(asyncio.to_thread(_sync_call), timeout=4.5)
+        return await asyncio.wait_for(asyncio.to_thread(_sync_call), timeout=12.0)
 
     async def _call_gemini_for_email(
         self,
@@ -292,10 +294,10 @@ class LLMClient:
             import google.generativeai as genai
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel(model_name)
-            response = model.generate_content(prompt, request_options={"timeout": 4})
+            response = model.generate_content(prompt, request_options={"timeout": 10})
             return response.text or ""
 
-        return await asyncio.wait_for(asyncio.to_thread(_sync_call), timeout=4.5)
+        return await asyncio.wait_for(asyncio.to_thread(_sync_call), timeout=12.0)
 
     async def _call_grok_for_rationale(
         self,

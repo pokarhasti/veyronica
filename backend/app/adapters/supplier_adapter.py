@@ -18,8 +18,8 @@ from email.message import EmailMessage
 
 logger = logging.getLogger("veyronica.adapters.supplier")
 
-DEFAULT_SENDER = "rojivadiyayugpc@gmail.com"
-DEFAULT_RECIPIENT = "rojivadiyayug1@gmail.com"
+DEFAULT_SENDER = "rojivadiyayug1@gmail.com"
+DEFAULT_RECIPIENT = "rojivadiyayugpc@gmail.com"
 
 
 class PostgresSupplierAdapter:
@@ -63,7 +63,15 @@ class PostgresSupplierAdapter:
         run_uuid = uuid.UUID(str(run_id))
 
         # Attempt live SMTP delivery if GMAIL_APP_PASSWORD / SMTP_PASSWORD is configured
-        smtp_password = os.getenv("GMAIL_APP_PASSWORD") or os.getenv("SMTP_PASSWORD")
+        from app.config import get_settings
+        settings = get_settings()
+        raw_password = (
+            settings.gmail_app_password
+            or os.getenv("GMAIL_APP_PASSWORD")
+            or os.getenv("SMTP_PASSWORD")
+            or ""
+        )
+        smtp_password = raw_password.replace(" ", "").strip() if raw_password else None
         if smtp_password:
             try:
                 msg = EmailMessage()
@@ -75,8 +83,10 @@ class PostgresSupplierAdapter:
                 smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
                 smtp_port = int(os.getenv("SMTP_PORT", "587"))
 
-                with smtplib.SMTP(smtp_host, smtp_port, timeout=8) as server:
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=12) as server:
+                    server.ehlo()
                     server.starttls()
+                    server.ehlo()
                     server.login(sender, smtp_password)
                     server.send_message(msg)
                 logger.info("Real email successfully transmitted via SMTP from %s to %s", sender, recipient)

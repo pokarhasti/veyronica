@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     gemini_api_key_7: str = ""
     gemini_api_key_8: str = ""
     gemini_api_keys: str = ""  # Optional comma-separated list of keys
-    gemini_model: str = "gemini-3.8-flash"  # Options: gemini-3.8-flash, gemini-3.6-flash, gemini-3.5-flash-lite, gemma-4
+    gemini_model: str = "gemini-3.5-flash"  # Options: gemini-3.5-flash, gemini-3.5-flash-lite, gemini-3.8-flash, gemma-4
 
     # Grok (xAI) Fallback
     llm_fallback_provider: str = "grok"
@@ -56,7 +56,7 @@ class Settings(BaseSettings):
 
     # Compatibility aliases
     llm_api_key: str = ""
-    llm_model: str = "gemini-3.8-flash"
+    llm_model: str = "gemini-3.5-flash"
     llm_timeout_seconds: int = 20
     llm_retry_count: int = 2
     llm_fallback_api_key: str = ""
@@ -101,6 +101,13 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173"
     api_host: str = "0.0.0.0"
     api_port: int = 8000
+
+    # SMTP / Live Email Delivery
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_from_email: str = "rojivadiyayug1@gmail.com"
+    smtp_to_email: str = "rojivadiyayugpc@gmail.com"
+    gmail_app_password: str = ""
 
     @property
     def cors_origin_list(self) -> list[str]:

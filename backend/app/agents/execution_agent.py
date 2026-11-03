@@ -52,8 +52,9 @@ class ExecutionAgent:
             total_value=float(draft.total_value),
         )
 
-        target_to_email = "rojivadiyayug1@gmail.com"
-        target_from_email = "rojivadiyayugpc@gmail.com"
+        import os
+        target_to_email = os.getenv("SMTP_TO_EMAIL", "rojivadiyayugpc@gmail.com")
+        target_from_email = os.getenv("SMTP_FROM_EMAIL", "rojivadiyayug1@gmail.com")
 
         email_res = await self.supplier.send_email(
             to=target_to_email,
