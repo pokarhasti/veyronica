@@ -112,7 +112,7 @@ export const App: React.FC = () => {
       <footer className="border-t border-ledger-hairline bg-ledger-surface/80 py-6 text-xs text-ledger-muted print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-xs bg-ledger-ink inline-block" />
+            <img src="/logo.png" alt="Veyronica Logo" className="w-3.5 h-3.5 object-contain rounded-xs" />
             <span className="font-serif italic font-semibold text-ledger-ink">Veyronica Ledger</span>
             <span className="text-ledger-hairline">|</span>
             <span>Autonomous Fiduciary Replenishment &amp; OTB Governance</span>
@@ -121,8 +121,6 @@ export const App: React.FC = () => {
             <span>FOLIO ED-2026</span>
             <span className="text-ledger-hairline">•</span>
             <span>SHA-256 VERIFIED IMMUTABILITY</span>
-            <span className="text-ledger-hairline">•</span>
-            <span>SIH 2026</span>
           </div>
         </div>
       </footer>

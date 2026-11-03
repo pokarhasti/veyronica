@@ -2,7 +2,7 @@
 
 > **V-Mart Governed Agentic Replenishment Platform**  
 > *Deterministic Separation: Code decides, AI explains.*  
-> **SIH 2026 Production Build** • [GitHub Repository](https://github.com/YugPatel11/Veyronica)
+> **Production Build** • [GitHub Repository](https://github.com/YugPatel11/Veyronica)
 
 ---
 

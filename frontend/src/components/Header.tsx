@@ -79,8 +79,8 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
         {/* Brand Masthead */}
         <div className="flex items-center space-x-3.5">
-          <div className="w-9 h-9 rounded-xs bg-ledger-ground border border-ledger-hairline flex items-center justify-center text-ledger-crimson shadow-ledger-xs">
-            <Scale className="w-5 h-5 stroke-[1.75]" />
+          <div className="w-9 h-9 rounded-xs overflow-hidden border border-ledger-hairline flex items-center justify-center shadow-ledger-xs bg-ledger-ground">
+            <img src="/logo.png" alt="Veyronica Logo" className="w-full h-full object-contain" />
           </div>
 
           <div>
