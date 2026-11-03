@@ -39,7 +39,7 @@ export interface ApprovalRequest {
   run_id: string;
   assigned_role: 'store_manager' | 'regional_manager';
   requested_at: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
   decided_by?: string;
   decided_by_role?: string;
   decided_at?: string;

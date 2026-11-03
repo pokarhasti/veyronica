@@ -29,9 +29,9 @@ async def get_metrics(db: AsyncSession = Depends(get_db)):
     )
     pending_approvals = pending.scalar() or 0
 
-    # Approved (human-approved)
+    # Approved (human-approved or completed)
     approved = await db.execute(
-        text("SELECT COUNT(*) FROM approval_requests WHERE status = 'approved'")
+        text("SELECT COUNT(*) FROM approval_requests WHERE status IN ('approved', 'completed')")
     )
     approved_count = approved.scalar() or 0
 

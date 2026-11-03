@@ -92,7 +92,7 @@ async def _reconcile_unsignalled_approvals():
                    ar.rejection_reason, r.run_id, r.temporal_wf_id
             FROM approval_requests ar
             JOIN runs r ON r.run_id = ar.run_id
-            WHERE ar.status IN ('approved', 'rejected')
+            WHERE ar.status IN ('approved', 'rejected', 'completed')
               AND r.status = 'awaiting_approval'
         """))
         rows = result.mappings().all()

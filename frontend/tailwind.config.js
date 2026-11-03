@@ -40,8 +40,11 @@ export default {
       },
       boxShadow: {
         'ledger-xs': '0 1px 2px rgba(28, 25, 23, 0.04)',
-        'ledger-sm': '0 1px 3px rgba(28, 25, 23, 0.05), 0 1px 2px rgba(28, 25, 23, 0.03)',
-        'ledger-md': '0 4px 6px -1px rgba(28, 25, 23, 0.05), 0 2px 4px -2px rgba(28, 25, 23, 0.05)',
+        'ledger-sm': '0 2px 4px rgba(28, 25, 23, 0.04), 0 1px 2px rgba(28, 25, 23, 0.03)',
+        'ledger-md': '0 4px 12px -2px rgba(28, 25, 23, 0.06), 0 2px 6px -1px rgba(28, 25, 23, 0.03)',
+        'ledger-lift': '0 8px 24px -3px rgba(28, 25, 23, 0.09), 0 3px 6px -2px rgba(28, 25, 23, 0.04)',
+        'crimson-lift': '0 6px 20px -2px rgba(153, 27, 27, 0.28), 0 2px 6px -1px rgba(153, 27, 27, 0.16)',
+        'emerald-lift': '0 6px 20px -2px rgba(6, 95, 70, 0.25), 0 2px 6px -1px rgba(6, 95, 70, 0.14)',
         'ledger-stamp': 'inset 0 0 0 1px rgba(153, 27, 27, 0.25), 0 1px 3px rgba(153, 27, 27, 0.08)',
         'ledger-seal': '0 0 0 1px #E7E5E4, 0 2px 4px rgba(28, 25, 23, 0.05)',
       },

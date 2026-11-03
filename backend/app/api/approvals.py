@@ -12,12 +12,15 @@
 # =============================================================================
 from __future__ import annotations
 
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.models.domain import DecisionRequest
+
+logger = logging.getLogger("veyronica.approvals")
 
 router = APIRouter(prefix="/api/approvals", tags=["approvals"])
 
@@ -179,6 +182,7 @@ async def _decide(
 
     # 3. Persist decision BEFORE sending signal (critical safety contract)
     now = datetime.now(timezone.utc)
+    approval_status = "completed" if outcome == "approved" else outcome
     await db.execute(
         text("""
             UPDATE approval_requests
@@ -187,7 +191,7 @@ async def _decide(
             WHERE approval_id = :id
         """),
         {
-            "status": outcome,
+            "status": approval_status,
             "decided_by": body.approver_id,
             "role": approver["role"],
             "decided_at": now,
@@ -205,7 +209,7 @@ async def _decide(
             WHERE run_id = :run_id AND status = 'pending'
         """),
         {
-            "status": outcome,
+            "status": approval_status,
             "decided_by": body.approver_id,
             "role": approver["role"],
             "decided_at": now,
@@ -370,7 +374,7 @@ async def _decide(
 
     return {
         "approval_id": approval_id,
-        "status": outcome,
+        "status": approval_status,
         "decided_by": body.approver_id,
         "decided_at": now.isoformat(),
     }

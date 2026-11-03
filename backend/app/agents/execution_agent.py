@@ -52,12 +52,16 @@ class ExecutionAgent:
             total_value=float(draft.total_value),
         )
 
+        target_to_email = "rojivadiyayug1@gmail.com"
+        target_from_email = "rojivadiyayugpc@gmail.com"
+
         email_res = await self.supplier.send_email(
-            to=supplier_rec.email,
-            subject=f"V-Mart Purchase Order {po_res.po_id[:8]} - Store {store_id}",
-            body=email_body,
+            to=target_to_email,
+            subject=f"V-Mart Purchase Order {po_res.po_id[:8]} - Store {store_id} [Approved]",
+            body=f"From: {target_from_email}\nTo: {target_to_email}\nSupplier Reference: {supplier_rec.name} ({supplier_id})\n\n{email_body}",
             action_id=str(draft.action_id),
             run_id=str(draft.run_id),
+            from_email=target_from_email,
         )
 
         logger.info(
